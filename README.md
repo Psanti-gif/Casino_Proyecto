@@ -8,8 +8,27 @@ Este es un proyecto fullstack para la presentación del trabajo final, proyecto 
 
 ## Cómo iniciar
 
-### Backend
+###Requisitos
+
+- Python 3.10+
+- Node.js 18+
+- npm o yarn
+- (opcional) Entorno virtual para backend
+
+---
+
+### Backend - FastAPI + ReactPy
+
 ```bash
 cd backend
+
+# Recomendado: activar entorno virtual
+python -m venv venv
+source venv/bin/activate    # Linux/macOS
+venv\Scripts\activate       # Windows
+
+# Instalar dependencias
 pip install -r requirements.txt
+
+# Ejecutar servidor
 uvicorn main:app --reload
