@@ -1,6 +1,6 @@
 # Proyecto de Casino 🎰
 
-Este es un proyecto fullstack para la presentación del trabajo final, proyecto enfocado en un Casino, realizando un backend en Python (FastAPI + ReactPy) y frontend en Next.js.
+Este es un proyecto fullstack para la presentación del trabajo final, proyecto enfocado en un Casino, realizando un backend en Python (FastAPI) y frontend en Next.js.
 
 ## Estructura
 - `backend/`: API REST construida en FastAPI.
