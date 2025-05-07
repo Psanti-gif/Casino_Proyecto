@@ -31,4 +31,4 @@ venv\Scripts\activate       # Windows
 pip install -r requirements.txt
 
 # Ejecutar servidor
-uvicorn main:app --reload
+uvicorn app.main:app --reload
