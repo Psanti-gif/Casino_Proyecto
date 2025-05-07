@@ -13,7 +13,6 @@ Este es un proyecto fullstack para la presentación del trabajo final, proyecto 
 - Python 3.10+
 - Node.js 18+
 - npm o yarn
-- (opcional) Entorno virtual para backend
 
 ---
 
