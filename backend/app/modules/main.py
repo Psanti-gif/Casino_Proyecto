@@ -1,11 +1,10 @@
-from reactpy import component, html
-from reactpy.backend.fastapi import configure
 from fastapi import FastAPI
-
-@component
-def HelloWorld():
-    return html.div("Api para casino")
-
+from app.modules.usuarios_configuracion import usuarios
 
 app = FastAPI()
-configure(app, HelloWorld)
+app.include_router(usuarios.router)
+
+
+@app.get("/")
+def inicio():
+    return {"mensaje": "Bienvenido a CUADRE CASINO"}
