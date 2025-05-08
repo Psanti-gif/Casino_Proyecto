@@ -4,7 +4,8 @@ from fastapi import FastAPI
 
 @component
 def HelloWorld():
-    return html.div("Proyecto de Casino")
+    return html.div("Api para casino")
+
 
 app = FastAPI()
 configure(app, HelloWorld)
