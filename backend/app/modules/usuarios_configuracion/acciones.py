@@ -27,10 +27,6 @@ def inactivar_usuario(id: int):
 
         partes = linea.strip().split(",")
 
-        if len(partes) != 5:
-            nuevas_lineas.append(linea)
-            continue
-
         id_actual = int(partes[0])
 
         if id_actual == id:
@@ -83,10 +79,6 @@ def activar_usuario(id: int):
             continue
 
         partes = linea.strip().split(",")
-
-        if len(partes) != 5:
-            nuevas_lineas.append(linea)
-            continue
 
         id_actual = int(partes[0])
 

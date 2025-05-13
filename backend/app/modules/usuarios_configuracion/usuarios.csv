@@ -1,3 +1,2 @@
-id,nombre,correo,rol,estado
-3,Yair,Yair,admin,inactivo
-4,Yair,yair,admin,inactivo
+id,nombre_usuario,nombre_completo,correo,rol,estado,contrasena
+12,yair.mosquera,Yair Mosquera Murillo,yair.mosquera@casino.com,admin,activo,Yair1234

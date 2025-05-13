@@ -58,12 +58,6 @@ def agregar_usuario(usuario: UsuarioEntrada):
     nuevo_id = obtener_siguiente_id()
     escribir_cabecera = True
 
-
-@router.post("/agregar-usuario")
-def agregar_usuario(usuario: UsuarioEntrada):
-    nuevo_id = obtener_siguiente_id()
-    escribir_cabecera = True
-
     if ARCHIVO.exists():
         with open(ARCHIVO, "r", encoding="utf-8") as f:
             primera_linea = f.readline().strip().lower()
@@ -120,9 +114,20 @@ def listar_usuarios():
 
 
 """
-# [a, append], [newline="", quitar lineas en blanco]
+with open(ARCHIVO, "r", encoding="utf-8") a -> append, newline="" -> quitar lineas en blanco
+
+readline -> primera linea
+lower() -> convierte todo a minuscilas
+
+
+
 """
 
 """
-listar usuarios http://127.0.0.1:8000/usuarios/
+api http://127.0.0.1:8000/docs
+listar usuarios http://127.0.0.1:8000/listar-usuarios/
+agrgar usuarios http://127.0.0.1:8000/agregar-usuario
+inactivar usuario http://127.0.0.1:8000/agregar-usuario/inactivar-usuario/{id}
+activar usuario http://127.0.0.1:8000/agregar-usuario/activar-usuario/{id}
+
 """
