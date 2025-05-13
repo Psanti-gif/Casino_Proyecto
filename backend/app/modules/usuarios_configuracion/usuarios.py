@@ -1,25 +1,31 @@
+from .acciones import router as acciones_router
 from pathlib import Path
 from fastapi import APIRouter
 from pydantic import BaseModel
+
 
 # Modelo que se usa al crear un usuario (sin ID)
 
 
 class UsuarioEntrada(BaseModel):
-    nombre: str
+    nombre_usuario: str
+    nombre_completo: str
     correo: str
     rol: str
     estado: str
+    contrasena: str
 
-# Modelo que se usa al listar (con ID)
+# Modelo que se usa para listar (con ID)
 
 
 class Usuario(BaseModel):
     id: int
-    nombre: str
+    nombre_usuario: str
+    nombre_completo: str
     correo: str
     rol: str
     estado: str
+    contrasena: str
 
 
 # Rutas de archivos
@@ -27,7 +33,7 @@ ARCHIVO = Path(__file__).parent / "usuarios.csv"
 ARCHIVO_CONTADOR = Path(__file__).parent / "contador_id.txt"
 
 # ruta de usuarios
-router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
+router = APIRouter(tags=["Usuarios"])
 
 # para generar ID autoincremental
 
@@ -47,23 +53,38 @@ def obtener_siguiente_id():
 # Ruta para agregar usuario
 
 
-@router.post("/")
+@router.post("/agregar-usuario")
 def agregar_usuario(usuario: UsuarioEntrada):
     nuevo_id = obtener_siguiente_id()
-
-    # Comprobamos si el archivo existe y si tiene cabecera
     escribir_cabecera = True
+
+
+@router.post("/agregar-usuario")
+def agregar_usuario(usuario: UsuarioEntrada):
+    nuevo_id = obtener_siguiente_id()
+    escribir_cabecera = True
+
     if ARCHIVO.exists():
         with open(ARCHIVO, "r", encoding="utf-8") as f:
-            primera_linea = f.readline().strip().lower()  # strip quitar espacios
-            if primera_linea == "id,nombre,correo,rol,estado":
-                escribir_cabecera = False  # Ya existe la cabecera
+            primera_linea = f.readline().strip().lower()
+            if primera_linea == "id,nombre_usuario,nombre_completo,correo,rol,estado,contrasena":
+                escribir_cabecera = False
 
-    with open(ARCHIVO, mode="a", encoding="utf-8") as f:
+    with open(ARCHIVO, "a", encoding="utf-8") as f:
         if escribir_cabecera:
-            f.write("id,nombre,correo,rol,estado\n")
+            f.write(
+                "id,nombre_usuario,nombre_completo,correo,rol,estado,contrasena\n")
 
-        linea = f"{nuevo_id},{usuario.nombre},{usuario.correo},{usuario.rol},{usuario.estado}\n"
+        linea = (
+            str(nuevo_id) + "," +
+            usuario.nombre_usuario + "," +
+            usuario.nombre_completo + "," +
+            usuario.correo + "," +
+            usuario.rol + "," +
+            usuario.estado + "," +
+            usuario.contrasena + "\n"
+        )
+
         f.write(linea)
 
     return {"mensaje": "Usuario guardado correctamente", "id_asignado": nuevo_id}
@@ -72,7 +93,7 @@ def agregar_usuario(usuario: UsuarioEntrada):
 # Ruta para listar usuarios
 
 
-@router.get("/")
+@router.get("/listar-usuarios")
 def listar_usuarios():
     lista = []
 
@@ -80,27 +101,23 @@ def listar_usuarios():
         with open(ARCHIVO, "r", encoding="utf-8") as f:
             lineas = f.readlines()
 
-            for linea in lineas[1:]:  # sato la cabecera
-                datos = linea.strip().split(",")  # Separa los campos por coma
+            for linea in lineas[1:]:
+                datos = linea.strip().split(",")
 
-                if len(datos) == 5:
+                if len(datos) == 7:
                     usuario = {
                         "id": int(datos[0]),
-                        "nombre": datos[1],
-                        "correo": datos[2],
-                        "rol": datos[3],
-                        "estado": datos[4]
+                        "nombre_usuario": datos[1],
+                        "nombre_completo": datos[2],
+                        "correo": datos[3],
+                        "rol": datos[4],
+                        "estado": datos[5],
+                        "contrasena": datos[6]
                     }
                     lista.append(usuario)
 
     return lista
 
-
-"""
-csv.DictReader(f) crea un lector de filas del archivo CSV (f), y convierte cada fila en un diccionario de Python.
-Toma la primera línea del archivo (la que tiene los encabezados: id,nombre,correo,rol,estado)
-Luego, cada fila del archivo se convierte en un diccionario con esos nombres como claves.
-"""
 
 """
 # [a, append], [newline="", quitar lineas en blanco]
