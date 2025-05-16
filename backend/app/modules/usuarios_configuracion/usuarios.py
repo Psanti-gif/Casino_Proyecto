@@ -1,4 +1,4 @@
-from .acciones import router as acciones_router
+from .acciones_usuario import router as acciones_router
 from pathlib import Path
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -55,6 +55,14 @@ def obtener_siguiente_id():
 
 @router.post("/agregar-usuario")
 def agregar_usuario(usuario: UsuarioEntrada):
+    if ARCHIVO.exists():
+        with open(ARCHIVO, "r", encoding="utf-8") as f:
+            lineas = f.readlines()
+            for linea in lineas[1:]:  # Saltar la cabecera
+                partes = linea.strip().split(",")
+                if len(partes) == 7 and partes[1].lower() == usuario.nombre_usuario.lower():
+                    return {"mensaje": "El nombre de usuario ya existe"}
+
     nuevo_id = obtener_siguiente_id()
     escribir_cabecera = True
 
@@ -125,9 +133,5 @@ lower() -> convierte todo a minuscilas
 
 """
 api http://127.0.0.1:8000/docs
-listar usuarios http://127.0.0.1:8000/listar-usuarios/
-agrgar usuarios http://127.0.0.1:8000/agregar-usuario
-inactivar usuario http://127.0.0.1:8000/agregar-usuario/inactivar-usuario/{id}
-activar usuario http://127.0.0.1:8000/agregar-usuario/activar-usuario/{id}
 
 """
