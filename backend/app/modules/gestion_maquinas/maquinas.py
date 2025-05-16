@@ -2,44 +2,51 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from pathlib import Path
 
-# Ruta de archivos
-ARCHIVO = Path(__file__).parent / "maquinas.csv"
-ARCHIVO_CONTADOR = Path(__file__).parent / "contador_maquinas.txt"
 
 # Modelos
 
 
 class MaquinaEntrada(BaseModel):
-    nombre_maquina: str
-    ubicacion: str
-    tipo: str
-    estado: str
+    marca: str
+    modelo: str
+    serial: str
+    asset: str
+    casino: str
+    denominacion: float  # no editable
+    estado: str  # activa o inactiva
 
 
 class Maquina(BaseModel):
     id: int
-    nombre_maquina: str
-    ubicacion: str
-    tipo: str
+    marca: str
+    modelo: str
+    serial: str
+    asset: str
+    casino: str
+    denominacion: float
     estado: str
 
 
-# Router de FastAPI
-router = APIRouter(prefix="/maquinas", tags=["Maquinas"])
+# Ruta de archivos
+ARCHIVO = Path(__file__).parent / "maquinas.csv"
+CONTADOR = Path(__file__).parent / "contador_maquinas.txt"
 
-# Obtener siguiente ID
+# Router de FastAPI
+router = APIRouter(tags=["Maquinas"])
+
+# ID automatico
 
 
 def obtener_siguiente_id():
-    if ARCHIVO_CONTADOR.exists():
-        with open(ARCHIVO_CONTADOR, "r") as f:
+    if CONTADOR.exists():
+        with open(CONTADOR, "r") as f:
             ultimo_id = int(f.read())
     else:
         ultimo_id = 0
 
     nuevo_id = ultimo_id + 1
 
-    with open(ARCHIVO_CONTADOR, "w") as f:
+    with open(CONTADOR, "w") as f:
         f.write(str(nuevo_id))
 
     return nuevo_id
@@ -47,53 +54,58 @@ def obtener_siguiente_id():
 # Ruta para agregar maquina
 
 
-@router.post("/agregar")
+@router.post("/agregar-maquina")
 def agregar_maquina(maquina: MaquinaEntrada):
     nuevo_id = obtener_siguiente_id()
     escribir_cabecera = True
 
     if ARCHIVO.exists():
         with open(ARCHIVO, "r", encoding="utf-8") as f:
-            primera = f.readline().strip().lower()
-            if primera == "id,nombre_maquina,ubicacion,tipo,estado":
+            if f.readline().strip().lower() == "id,marca,modelo,serial,asset,casino,denominacion,estado":
                 escribir_cabecera = False
 
     with open(ARCHIVO, "a", encoding="utf-8") as f:
         if escribir_cabecera:
-            f.write("id,nombre_maquina,ubicacion,tipo,estado\n")
+            f.write("id,marca,modelo,serial,asset,casino,denominacion,estado\n")
 
         linea = (
             str(nuevo_id) + "," +
-            maquina.nombre_maquina + "," +
-            maquina.ubicacion + "," +
-            maquina.tipo + "," +
+            maquina.marca + "," +
+            maquina.modelo + "," +
+            maquina.serial + "," +
+            maquina.asset + "," +
+            maquina.casino + "," +
+            str(maquina.denominacion) + "," +
             maquina.estado + "\n"
         )
 
         f.write(linea)
 
-    return {"mensaje": "Maquina guardada correctamente", "id_asignado": nuevo_id}
+    return {"mensaje": "Maquina registrada correctamente", "id": nuevo_id}
 
-# Ruta para listar maquinas
+# Listar todas las maquinas
 
 
-@router.get("/listar")
+@router.get("/listar-maquinas")
 def listar_maquinas():
     lista = []
 
     if ARCHIVO.exists():
         with open(ARCHIVO, "r", encoding="utf-8") as f:
-            lineas = f.readlines()
-            for linea in lineas[1:]:
-                partes = linea.strip().split(",")
+            lineas = f.readlines()[1:]  # saltar cabecera
 
-                if len(partes) == 5:
+            for linea in lineas:
+                partes = linea.strip().split(",")
+                if len(partes) == 8:
                     maquina = {
                         "id": int(partes[0]),
-                        "nombre_maquina": partes[1],
-                        "ubicacion": partes[2],
-                        "tipo": partes[3],
-                        "estado": partes[4]
+                        "marca": partes[1],
+                        "modelo": partes[2],
+                        "serial": partes[3],
+                        "asset": partes[4],
+                        "casino": partes[5],
+                        "denominacion": float(partes[6]),
+                        "estado": partes[7]
                     }
                     lista.append(maquina)
 
