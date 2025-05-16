@@ -1,0 +1,7 @@
+ID,Nombre,Tipo,Estado,casino_id,casino_nombre,zona
+1,Ruleta 200,Ruleta,Activo,1,Casino Boston,Norte
+2,Blackjack,Juego de mesa,Activo,1,Casino Boston,Norte
+3,Zeus,Tragamoneda,Inactivo,2,Casino Robledo,Sur
+4,Cleopatra Slot,Tragamoneda,Activo,2,Casino Robledo,Sur
+5,Ruleta 500,Ruleta,Activo,3,Casino Medellín,Norte
+6,Poker Texas,Juego de mesa,Activo,3,Casino Medellín,Norte

@@ -25,4 +25,3 @@ print(df_actividad)
 
 print("\n--- DATOS CASINO ---")
 print(df_casino)
-

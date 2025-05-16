@@ -1,67 +1,69 @@
 #Reportes Casino
 from datetime import datetime
+import pandas as pd
+from Cargar_Datos import cargar_datos_actividad, cargar_datos_casino
+df_actividad = cargar_datos_actividad()
+df_maquinas = cargar_datos_casino()
 
-#1. ENTRADA DE PARAMETROS
-
-
-def SeleccionarMaquina(casino_id = None, estado = False):
-    Maquinas_Disponibles = [{'ID': 1, 'Nombre': 'Ruleta 200', 'Tipo': 'Ruleta', 'Estado': 'Activo', 'casino_id': 1},
-                            {'ID': 2, 'Nombre': 'Blackjack', 'Tipo': 'Juego de mesa', 'Estado': 'Activo', 'casino_id': 1},
-                            {'ID': 3, 'Nombre': 'Zeus', 'Tipo': 'Tragamoneda', 'Estado': 'Inactivo', 'casino_id': 2}]
+def SeleccionarMaquina(casino_id = None, incluir_inactivos = False):
+    df = df_maquinas[df_maquinas['casino_id'] == casino_id]
+   
+    if not incluir_inactivos:
+        df = df[df['Estado'].str.lower() == 'activo']
+        
+    if df.empty:
+        print("No hay maquinas disponibles.")
+        return[]
     
-    if casino_id is not None:
-        Maquinas_Disponibles = [i for i in Maquinas_Disponibles if i['casino_id'] == casino_id]
-        
-    if not estado:
-        Maquinas_Disponibles = [i for i in Maquinas_Disponibles if i['Estado'] == 'Activo']
-        
-    #Salida
     print("Maquinas disponibles:")
-    for m in Maquinas_Disponibles:
-        print(f"{m['ID']}, {m['Nombre']}, {m['Tipo'], {m['Estado']}}")
+    for i, j in df.iterrows():
+        print(f"{j['ID']}: {j['Nombre']} - {j['Tipo']} - {j['Estado']}")
         
     seleccion_id = input("Seleccione las maquinas a través de sus ID's (separelas con coma por favor): ")
-    seleccion_id = [int(i.strip()) for i in seleccion_id.split(",")]
+    try:
+        seleccion = [int(x.strip()) for x in seleccion_id.split(',')]
+    except ValueError:
+        print("Entrada invalida.")
+        return []
     
-    Maquinas_seleccionada = [i for i in Maquinas_Disponibles if i['ID'] in seleccion_id]
-    return Maquinas_seleccionada
+    maquinas_seleccionadas = df[df['ID'].isin(seleccion)]
+    if maquinas_seleccionadas.empty:
+        print("No se selecciono maquina, entrada invalida")
+        return []
+    return maquinas_seleccionadas.to_dict('records')
     
 def SeleccionarCasino(nombre=None, zona= None):
-    Casinos_Disponibles = [
-        {'ID': 1, 'Nombre': 'Casino Boston', 'Zona': 'Norte', 'Estado': 'Activo'},
-        {'ID': 2, 'Nombre': 'Casino Robledo', 'Zona': 'Sur', 'Estado': 'Activo'},
-    ]
+    df = df_maquinas[['casino_id', 'casino_nombre', 'zona']].drop_duplicates()
       
     if nombre:
-        Casinos_Disponibles = [i for i in Casinos_Disponibles if nombre.lower() in i['Nombre'].lower()]
-        return
+        df = df[df['casino_nombre'].str.contains(nombre, case=False, na=False)]
     
     if zona:
-        Casinos_Disponibles = [i for i in Casinos_Disponibles if zona.lower() in i['Zona'].lower()]
+        df = df[df['zona'].str.contains(zona, case=False, na=False)]
     
-    Casinos_Activos = [i for i in Casinos_Disponibles if i['Estado'] == 'Activo']
-    if not Casinos_Activos:
-        print("No hay casinos que coincidan con los filtros.")
+    if df.empty:
+        print("No hay casinos que coincidan con los filtros")
         return None
     
     print("Casinos disponibles:")
-    for c in Casinos_Activos:
-        print(f"{c['ID']}: {c['Nombre']} - {c['Zona']}")
+    for i, j in df.iterrows():
+        print(f"{j['casino_id']}: {j['casino_nombre']} - {j['zona']}")
     
-    Seleciona_ID = input("Selecciona el casino por su ID: ")
-    try:
-        Seleciona_ID = int(Seleciona_ID.strip())
-    except ValueError:
-        print("ID invalido")
-        return None
-    
-    Casino_Seleccionado = [i for i in Casinos_Disponibles if i['ID'] == Seleciona_ID]
-    if not Casino_Seleccionado:
-        print("El ID ingresado no corresponde a un casino existente.")
-        return None
-    
-    return Casino_Seleccionado[0]
-
+    while True:
+        choice = input("Seleccione el casino por su ID: ")
+        try:
+            if choice in df['casino_id'].values:
+                casino_selec = df[df['casino_id'] == choice].iloc[0]
+                return{
+                    'ID': casino_selec['casino_id'],
+                    'Nombre': casino_selec['casino_nombre'],
+                    'Zona': casino_selec['zona']
+                } 
+            else:
+                print("ID invalido, por favor intente nuevamente.")
+        except ValueError:
+            print("Por favor ingrese un numero valido.")
+            
 def SeleccionarRangoFechas():
     while True:
         try:
@@ -82,17 +84,17 @@ def SeleccionarRangoFechas():
 
 def GenerarReporte():
     print("<<< Módulo de Reportes de Casino >>>")
-    #Seleccionamos el casino
+  
     Casino = SeleccionarCasino()
     if not Casino:
         print("Cancelando operacion... No se seleccionó un casino.")
         return
-    #Seleccionamos maquina segun el casino
+   
     Maquina = SeleccionarMaquina(casino_id=Casino['ID'])
     if not Maquina:
         print("No se seleccionaron maquinas validas.")
         return
-    #Seleccionamos rango de fechas
+
     Fecha_Inicio, Fecha_Fin = SeleccionarRangoFechas()
     
     print("\nTipos de reportes disponibles:")
@@ -102,23 +104,50 @@ def GenerarReporte():
     TipoReporte = input("Seleccione una opcion: ")
     
     if TipoReporte == '1':
-        ReporteIndividual()
+        ReporteIndividual(Maquina, Fecha_Inicio, Fecha_Fin)
     elif TipoReporte == '2':
-        ReporteGrupal()
+        ReporteGrupal(Maquina, Fecha_Inicio, Fecha_Fin)
     elif TipoReporte == '3':
-        ReporteConsolidado()
+        ReporteConsolidado(Maquina, Fecha_Inicio, Fecha_Fin)
     else:
         print("Opcion invalida.")
         return
     
 def ReporteIndividual(maquinas, fecha_inicio, fecha_fin):
-    pass
+    print("\n<<< Reporte individual >>>")
+    for maquina in maquinas:
+        id_maquina = maquina['ID']
+        nombre = maquina['Nombre']
+        tipo = maquina['Tipo']
+        
+        df_filtrada = df_actividad[
+            (df_actividad['maquina_id'] == id_maquina) &
+            (df_actividad['fecha'] >= fecha_inicio) &
+            (df_actividad['fecha'] <= fecha_fin)
+        ]
+        
+        if df_filtrada.empty:
+            print(f"\nMaquina ID: {id_maquina} ({nombre}): No hay actividad en el rango de fechas.")
+            continue
+        
+        total_in = df_filtrada['IN'].sum()
+        total_out = df_filtrada['OUT'].sum()
+        total_jackpot = df_filtrada['JACKPOT'].sum()
+        total_billetero = df_filtrada['BILLETERO'].sum()
+        utilidad = total_in - total_out - total_jackpot - total_billetero
+        
+        print(f"\nMaquina ID {id_maquina}: {nombre} ({tipo})")
+        print(f"IN: {total_in}")
+        print(f"OUT: {total_out}")
+        print(f"JACKPOT: {total_jackpot}")
+        print(f"BILLETERO: {total_billetero}")
+        print(f"UTILIDAD: {utilidad}")
+        
 
 def ReporteGrupal(maquinas, fecha_inicio, fecha_fin):
     pass
 
 def ReporteConsolidado(maquinas, fecha_inicio, fecha_fin):
     pass
-    
-    
-        
+
+
