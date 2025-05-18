@@ -65,34 +65,85 @@ def SeleccionarCasino(nombre=None, zona= None):
             print("Por favor ingrese un numero valido.")
             
 def SeleccionarRangoFechas():
+    fechas_disponibles = df_actividad['fecha']
+    fecha_min = fechas_disponibles.min().date()
+    fecha_max = fechas_disponibles.max().date()
+    
+    print(f"\Rango de fechas disponibles en la base de datos: {fecha_min} hasta {fecha_max}")
+    
     while True:
         try:
-            Fecha_Inicio = input("Ingrese la fecha de inicio (Formato YYYY/MM/DD): ")
-            Fecha_Inicio = datetime.strptime(Fecha_Inicio, "%Y-%m-%d")
+            entrada_in = input("Ingrese fecha de inicio (YYYY/MM/DD) o 'Exit' para salir").strip()
+            if entrada_in.lower() == 'Exit':
+                return None, None
             
-            Fecha_Fin = input("Ingrese la fecha de fin (Formato YYYY/MM/DD): ")
-            Fecha_Fin = datetime.strptime(Fecha_Fin, "%Y-%m-%d")
+            entrada_end = input("Ingrese la fecha fin (YYYY/MM/DD) o 'Exit' para salir").strip()
+            if entrada_end.lower() == 'Exit':
+                return None, None
             
-                
-            if Fecha_Inicio > Fecha_Fin:
-                print("La fecha de inicio no puede ser posterior a la fecha de fin.")
+            fecha_inicio = datetime.strptime(entrada_in,"%Y-%m-%d").date()
+            fecha_fin = datetime.strptime(entrada_end, "%Y-%m-%d").date()
+            
+            if fecha_inicio > fecha_fin:
+                print("La fecha de inicio no puede ser posterior a la fecha fin")
                 continue
             
-            return Fecha_Inicio, Fecha_Fin
+            if fecha_inicio < fecha_min or fecha_fin > fecha_max:
+                print(f"Las fechas deben estar dentro del rango {fecha_min} a {fecha_max}")
+                continue
+            
+            return fecha_inicio, fecha_fin
         except ValueError:
-            print("Hubo un error con el ingreso de fecha. Intente nuevamente.")
+            print("Formato de fecha incorrecto. Use el sugerido.")
 
+def FiltrosAvanazados(df_maquinas):
+    print("\n<<< Filtros avanzados >>>")
+    
+    zonas_disponibles = df_maquinas['zona'].unique()
+    print(f"Zonas disponibles: {', '.join(zonas_disponibles)}")
+    zona = input("Filtrar por zona (presione ENTER para omitir): ")
+    if zona:
+        df_maquinas = df_maquinas[df_maquinas['zona'] == zona]
+    
+    casinos_disponibles = df_maquinas['casino_nombre'].unique()
+    print(f"Casinos disponibles: {', '.join(casinos_disponibles)}")
+    casino = input("Filtrar por casino (presione ENTER para omitir): ")
+    if casino:
+        df_maquinas = df_maquinas[df_maquinas['casino_nombre'] == casino]
+        
+    tipos_disponibles = df_maquinas['Tipo'].unique()
+    print(f"Tipos de máquinas disponibles: {', '.join(tipos_disponibles)}")
+    tipo = input("Filtrar por tipo de maquina (presione ENTER para omitir): ")
+    if tipo:
+        df_maquinas = df_maquinas[df_maquinas['Tipo'] == tipo]
+        
+    marcas_disponibles = df_maquinas['Marca'].unique()
+    print(f"Marcas disponibles: {', '.join(marcas_disponibles)}")
+    marca = input("Filtrar por marca (presione ENTER para omitir): ")
+    if marca:
+        df_maquinas = df_maquinas[df_maquinas['Marca'] == marca]
+    
+    modelos_disponibles = df_maquinas['Modelo'].unique()
+    print(f"Modelos disponibles: {', '.join(modelos_disponibles)}")   
+    modelo = input("Filtrar por modelo (presione ENTER para omitir): ")
+    if modelo:
+        df_maquinas = df_maquinas[df_maquinas['Modelo'] == modelo]
+        
+    if df_maquinas.empty:
+        print("No se encontraron resultados.")
+        return []
+    
+    maquinas_selec = df_maquinas.to_dict('records')
+    print(f"Se seleccionaron {len(maquinas_selec)} maquinas con los filtros seleccionados.")
+    return maquinas_selec
+            
 def GenerarReporte():
     print("<<< Módulo de Reportes de Casino >>>")
-  
-    Casino = SeleccionarCasino()
-    if not Casino:
+    
+    maquinas_filtradas = FiltrosAvanazados()
+    
+    if not maquinas_filtradas:
         print("Cancelando operacion... No se seleccionó un casino.")
-        return
-   
-    Maquina = SeleccionarMaquina(casino_id=Casino['ID'])
-    if not Maquina:
-        print("No se seleccionaron maquinas validas.")
         return
 
     Fecha_Inicio, Fecha_Fin = SeleccionarRangoFechas()
@@ -104,11 +155,11 @@ def GenerarReporte():
     TipoReporte = input("Seleccione una opcion: ")
     
     if TipoReporte == '1':
-        ReporteIndividual(Maquina, Fecha_Inicio, Fecha_Fin)
+        ReporteIndividual(maquinas_filtradas.to_dict(orient='records'), Fecha_Inicio, Fecha_Fin)
     elif TipoReporte == '2':
-        ReporteGrupal(Maquina, Fecha_Inicio, Fecha_Fin)
+        ReporteGrupal(maquinas_filtradas.to_dict(orient='records'), Fecha_Inicio, Fecha_Fin)
     elif TipoReporte == '3':
-        ReporteConsolidado(Maquina, Fecha_Inicio, Fecha_Fin)
+        ReporteConsolidado(maquinas_filtradas.to_dict(orient='records'), Fecha_Inicio, Fecha_Fin)
     else:
         print("Opcion invalida.")
         return
@@ -145,9 +196,66 @@ def ReporteIndividual(maquinas, fecha_inicio, fecha_fin):
         
 
 def ReporteGrupal(maquinas, fecha_inicio, fecha_fin):
-    pass
-
+    print("<<< Reporte grupal por maquina >>>")
+    
+    df_maquinas_filtradas = pd.DataFrame(maquinas)
+    
+    ids_maquinas = df_maquinas_filtradas['ID'].tolist()
+    df_filtrada = df_actividad[
+        (df_actividad['maquina_id'].isin(ids_maquinas)) &
+        (df_actividad['fecha'] >= fecha_inicio) &
+        (df_actividad['fecha'] <=fecha_fin)
+    ]
+    
+    if df_filtrada.empty:
+        print("No hay actividad en el rango de fechas para las maquinas seleccionadas")
+        return
+    
+    df_merged = df_filtrada.merge(df_maquinas_filtradas, left_on = 'maquina_id', right_on = 'ID')
+    resumen = df_merged.groupby('Tipo').agg({
+        'IN': 'sum',
+        'OUT': 'sum',
+        'JACKPOT': 'sum',
+        'BILLETERO': 'sum'
+    }).reset_index()
+    
+    resumen['UTILIDAD'] = resumen['IN'] - resumen['OUT'] - resumen['JACKPOT'] - resumen['BILLETERO']
+    
+    for _, fila in resumen.iterrows():
+        print(f"\nTipo: {fila['Tipo']}")
+        print(f"IN: {fila['IN']}")
+        print(f"OUT: {fila['OUT']}")
+        print(f"JACKPOT: {fila['JACKPOT']}")
+        print(f"BILLETERO: {fila['BILLETERO']}")
+        print(f"UTILIDAD: {fila['UTILIDAD']}")
+    
 def ReporteConsolidado(maquinas, fecha_inicio, fecha_fin):
-    pass
-
+    print("<<< Reporte consolidado >>>")
+    
+    ids_maquinas = [i['ID'] for i in maquinas]
+    
+    df_filtrada = df_actividad[
+        (df_actividad['maquina_id'].isin(ids_maquinas)) &
+        (df_actividad['fecha'] >= fecha_inicio) &
+        (df_actividad['fecha'] <= fecha_fin)
+    ]
+    
+    if df_filtrada.empty:
+        print("No hay datos de actividad en el rango de fechas seleccionado")
+        return
+    
+    total_in = df_filtrada['IN'].sum()
+    total_out = df_filtrada['OUT'].sum()
+    total_jackpot = df_actividad['JACKPOT'].sum()
+    total_billetero = df_actividad['BILLETERO'].sum()
+    utilidad = total_in - total_out - total_jackpot - total_billetero
+    
+    print(f"\nRango de fechas: {fecha_inicio.date()} a {fecha_fin.date()}")
+    print(f"Maquinas incluidas: {len(ids_maquinas)}")
+    print(f"IN total: {total_in}")
+    print(f"OUT total: {total_out}")
+    print(f"JACPOT total: {total_jackpot}")
+    print(f"BILLETERO total: {total_billetero}")
+    print(f"UTILIDAD total: {utilidad}")
+    
 
