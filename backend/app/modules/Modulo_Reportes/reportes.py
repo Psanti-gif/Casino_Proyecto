@@ -2,6 +2,8 @@
 from datetime import datetime
 import pandas as pd
 from Cargar_Datos import cargar_datos_actividad, cargar_datos_casino
+from fpdf import FPDF
+
 df_actividad = cargar_datos_actividad()
 df_maquinas = cargar_datos_casino()
 
@@ -246,8 +248,8 @@ def ReporteConsolidado(maquinas, fecha_inicio, fecha_fin):
     
     total_in = df_filtrada['IN'].sum()
     total_out = df_filtrada['OUT'].sum()
-    total_jackpot = df_actividad['JACKPOT'].sum()
-    total_billetero = df_actividad['BILLETERO'].sum()
+    total_jackpot = df_filtrada['JACKPOT'].sum()
+    total_billetero = df_filtrada['BILLETERO'].sum()
     utilidad = total_in - total_out - total_jackpot - total_billetero
     
     print(f"\nRango de fechas: {fecha_inicio.date()} a {fecha_fin.date()}")
@@ -258,4 +260,86 @@ def ReporteConsolidado(maquinas, fecha_inicio, fecha_fin):
     print(f"BILLETERO total: {total_billetero}")
     print(f"UTILIDAD total: {utilidad}")
     
-
+def ExportToPDF(name, maquinas, fecha_in, fecha_fin, tipo_reporte, df_actividad):
+    tipo_reporte = tipo_reporte.lower()
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font('Arial', size= 12)
+    
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(200, 10, txt='REPORTE DE ACTIVIDAD DE MAQUINAS', ln=True, align='C')
+    
+    pdf.set_font('Arial', size=12)
+    pdf.cell(200, 10, txt=f"Tipo de reporte: {tipo_reporte.upper()}", ln=True, align='C')
+    pdf.cell(200, 10, txt=f"Fecha: {fecha_in.date()} a {fecha_fin.date()}", ln=True, align='C')
+    pdf.ln(10)
+    
+    ids_maquinas = [i['ID'] for i in maquinas]
+    df_filtrada = df_actividad[
+        (df_actividad['maquina_id'].isin(ids_maquinas)) &
+        (df_actividad['fecha'] >= fecha_in) &
+        (df_actividad['fecha'] <= fecha_fin)
+    ]
+    
+    if df_filtrada.empty:
+        pdf.set_text_color(255, 0, 0)
+        pdf.cell(200, 10, txt='No hay datos de actividad en este rango de fechas', ln=True)
+        pdf.output(name)
+        print(f"PDF generado sin datos: {name}")
+        return
+    pdf.set_text_color(0,0,0)
+    
+    if tipo_reporte == 'consolidado':
+        total_in = df_filtrada['IN'].sum()
+        total_out = df_filtrada['OUT'].sum()
+        total_jackpot = df_filtrada['JACKPOT'].sum()
+        total_billetero = df_filtrada['BILLETERO'].sum()
+        utilidad = total_in - total_out - total_jackpot - total_billetero
+        
+        pdf.set_text_color(0,0,0)
+        pdf.cell(200, 10, txt=f'Maquinas incluidas: {len(ids_maquinas)}', ln=True)
+        pdf.cell(200, 10, txt=f'IN total: {total_in}', ln=True)
+        pdf.cell(200, 10, txt=f'OUT total: {total_out}', ln=True)
+        pdf.cell(200, 10, txt=f'JACKPOT total: {total_jackpot}', ln=True)
+        pdf.cell(200, 10, txt=f'BILLETERO total: {total_billetero}', ln=True)
+        pdf.cell(200, 10, txt=f'UTILIDAD total: {utilidad}', ln=True)
+    
+    elif tipo_reporte == 'individual':
+        for i in maquinas:
+            mid = i['ID']
+            datos = df_filtrada[df_filtrada['maquina_id'] == mid]
+            if datos.empty:
+                continue
+            pdf.set_font('Arial', 'B', 12)
+            pdf.cell(200, 10, txt=f'Maquina ID: {mid}', ln=True)
+            pdf.set_font('Arial', 'B', size=12)
+            pdf.cell(200, 10, txt=f'Marca: {i['marca']}, Modelo: {i['modelo']}', ln=True)
+            pdf.cell(200, 10, txt=f'IN: {datos['IN'].sum()}, OUT: {datos['OUT'].sum()}, JACKPOT: {datos['JACKPOT'].sum()}, BILLETERO: {datos['BILLETERO'].sum()}', ln=True)
+            utilidad = datos['IN'].sum() - datos['OUT'].sum() - datos['JACKPOT'].sum() - datos['BILLETERO'].sum()
+            pdf.cell(200, 10, txt=f'UTILIDAD: {utilidad}', ln=True)
+            pdf.ln(5)
+    
+    elif tipo_reporte == 'grupal':
+        group = df_filtrada.groupby('maquina_id').sum(numeric_only=True)
+        for i in group.index:
+            maquina = next((m for m in maquinas if m['ID'] == i), None)
+            if not maquina:
+                continue
+            row = group.loc[i]
+            utilidad = row['IN'] - row['OUT'] - row['JACKPOT'] - row['BILLETERO']
+            
+            pdf.set_font('Arial', 'B', 12)
+            pdf.cell(200, 10, txt=f'Maquina ID: {i}', ln=True)
+            pdf.set_font('Arial', 'B', size=12)
+            pdf.cell(200, 10, txt=f'Marca: {maquina['marca']}, Modelo: {maquina['Modelo']}', ln=True)
+            pdf.cell(200, 10, txt=f"IN: {row['IN']}, OUT: {row['OUT']}, JACKPOT: {row['JACKPOT']}, BILLETERO: {row['BILLETERO']}", ln=True)
+            pdf.cell(200, 10, txt=f'UTILIDAD: {utilidad}', ln=True)
+            pdf.ln(5)
+    else:
+        pdf.cell(200, 10, txt='Tipo de reporte no soportado', ln=True)
+            
+    pdf.output(name)
+    print(f"PDF generado exitosamente!: {name} ✅")
+    
+def ExportToExcel():
+    pass
