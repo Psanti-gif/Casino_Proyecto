@@ -1,0 +1,16 @@
+{
+  "1": {
+    "nombre_usuario": "yair",
+    "nombre_completo": "Yair Mosquera",
+    "contrasena": "1234",
+    "rol": "Admin",
+    "estado": "Activo"
+  },
+  "2": {
+    "nombre_usuario": "operador1",
+    "nombre_completo": "Operador de Prueba",
+    "contrasena": "abcd",
+    "rol": "Operator",
+    "estado": "Activo"
+  }
+}
