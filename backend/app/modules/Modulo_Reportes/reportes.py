@@ -3,6 +3,14 @@ from datetime import datetime
 import pandas as pd
 from Cargar_Datos import cargar_datos_actividad, cargar_datos_casino
 from fpdf import FPDF
+import smtplib
+from email.message import EmailMessage
+from email.utils import formataddr
+import schedule
+import threading
+import time
+import mimetypes
+import os
 
 df_actividad = cargar_datos_actividad()
 df_maquinas = cargar_datos_casino()
@@ -339,7 +347,166 @@ def ExportToPDF(name, maquinas, fecha_in, fecha_fin, tipo_reporte, df_actividad)
         pdf.cell(200, 10, txt='Tipo de reporte no soportado', ln=True)
             
     pdf.output(name)
-    print(f"PDF generado exitosamente!: {name} ✅")
+    print(f"PDF generado exitosamente!: {name}")
     
-def ExportToExcel():
-    pass
+def ExportToExcel(name, maquinas, fecha_in, fecha_fin, tipo_reporte, df_actividad):
+    tipo_reporte = tipo_reporte.lower()
+    
+    ids_maquinas = [i['ID'] for i in maquinas]
+    
+    df_filtrada = df_actividad[
+        (df_actividad['maquina_id'].isin(ids_maquinas)) &
+        (df_actividad['fecha'] >= fecha_in) &
+        (df_actividad['fecha'] <= fecha_fin)
+    ]
+    
+    if df_filtrada.empty:
+        print("No hay datos de actividad en este rango de fechas")
+        return
+    
+    if tipo_reporte == 'consolidado':
+        total_in = df_filtrada['IN'].sum()
+        total_out = df_filtrada['OUT'].sum()
+        total_jackpot = df_filtrada['JACKPOT'].sum()
+        total_billetero = df_filtrada['BILLETERO'].sum()
+        utilidad = total_in - total_out - total_jackpot - total_billetero
+        
+        df_resumen = pd.DataFrame([{
+            'Maquinas incluidas': len(ids_maquinas),
+            'IN total': total_in,
+            'OUT total': total_out,
+            'JACKPOT total': total_jackpot,
+            'BILLETERO total': total_billetero,
+            'UTILIDAD total': utilidad
+        }])
+        df_resumen.to_excel(name, index=False)
+        print("Excel generado exitosamente:", name)
+        return
+    
+    elif tipo_reporte == 'individual':
+        filas = []
+        for i in maquinas:
+            mid = i['ID']
+            datos = df_filtrada[df_filtrada['maquina_id'] == mid]
+            if datos.empty:
+                continue
+            in_total = datos['IN'].sum()
+            out_total = datos['OUT'].sum()
+            jackpot_total = datos['JACKPOT'].sum()
+            billetero_total = datos['BILLETERO'].sum()
+            utilidad = in_total - out_total - jackpot_total - billetero_total
+            
+            filas.append({
+                'ID': mid,
+                'Marca': i['Marca'],
+                'Modelo': i['Modelo'],
+                'IN': in_total,
+                'OUT': out_total,
+                'JACKPOT': jackpot_total,
+                'BILLETERO': billetero_total,
+                'UTILIDAD' : utilidad
+            })
+        df_resultado = pd.DataFrame(filas)
+        df_resultado.to_excel(name, index= False)
+        print("Excel generado exitosamente: ", name)
+        return
+    elif tipo_reporte == 'grupal':
+        group = df_filtrada.groupby('maquina_id').sum(numeric_only = True)
+        filas = []
+        for i in group.index:
+            maquina = next((m for m in maquinas if m['ID'] == i), None)
+            if not maquina:
+                continue
+            row = group.loc[i]
+            utilidad = row['IN'] - row['OUT'] - row['JACKPOT'] - row['BILLETERO']
+            
+            filas.append({
+                'ID': i,
+                'Marca': maquina['Marca'],
+                'Modelo': maquina['Modelo'],
+                'IN': row['IN'],
+                'OUT': row['OUT'],
+                'JACKPOT': row['JACKPOT'],
+                'BILLETERO': row['BILLETERO'],
+                'UTILIDAD': utilidad
+            })
+        df_resultado = pd.DataFrame(filas)
+        df_resultado.to_excel(name, index=False)
+        print("Excel generado con exito:", name)
+        return
+    else:
+        print("Tipo de reporte no soportado")
+
+def SendEmail(
+    remitente_correo,
+    remitente_nombre,
+    contraseña_app,
+    destinarios,
+    asunto,
+    cuerpo,
+    archivo_adjunto,
+    nombre_mostrado = None,
+    servidor = 'smtp.gmail.com',
+    puerto = 587
+):
+    if not os.path.exists(archivo_adjunto):
+        print(f"El archivo '{archivo_adjunto}' no existe")
+        return
+    
+    msg = EmailMessage()
+    msg['From'] = formataddr((remitente_nombre or remitente_correo, remitente_correo))
+    msg['To'] = ', '.join(destinarios)
+    msg['Subject'] = asunto
+    msg.set_content(cuerpo)
+    
+    with open(archivo_adjunto, 'rb') as f:
+        nombre_archivo = nombre_mostrado or os.path.basename(archivo_adjunto)
+        msg.add_attachment(f.read(), maintype = 'application', subtype = 'octet-stream', filename = nombre_archivo)
+    try:
+        with smtplib.SMTP(servidor, puerto) as smtp:
+            smtp.starttls()
+            smtp.login(remitente_correo, contraseña_app)
+            smtp.send_message(msg)
+            print(f"Correo enviado a {', '.join(destinarios)}.")
+    except Exception as e:
+        print(f"Error al enviar el correo: {e}")
+        
+def ProgramarEnvioAutomatico(name, tipo, maquinas, fecha_in, fecha_fin, df_actividad, correo_destino, frecuencia= 'diario', hora= '08:00'):
+    def tarea():
+        print(f"Ejecutando envio automatico {tipo.upper()} a las {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        if tipo == 'pdf':
+            ExportToPDF(name, maquinas, fecha_in, fecha_fin, 'consolidado', df_actividad)
+        elif tipo == 'excel':
+            ExportToExcel(name, maquinas, fecha_in, fecha_fin, 'consolidado', df_actividad)
+        else:
+            print("Tipo de reporte invalido")
+            return
+        
+        SendEmail(
+            remitente_correo="tucorreo@gmail.com",
+            remitente_nombre="CasinoApp",
+            contraseña_app="tupassword_o_clave_app",
+            destinatarios=correo_destino,
+            asunto=f"Reporte automático ({tipo.upper()})",
+            cuerpo=f"Este es un reporte automático generado por CasinoApp.",
+            archivo_adjunto=name
+        )
+    
+    if frecuencia == 'diario':
+        schedule.every().day.at(hora).do(tarea)
+    elif frecuencia == 'semanal':
+        schedule.every().friday.at(hora).do(tarea)
+    elif frecuencia == 'mensual':
+        schedule.every().day.at(hora).do(lambda: tarea() if datetime.now().day == 1 else None)
+    else:
+        print("Frencuencia no soportada")
+        return
+    
+    def programador():
+        print("Envio automatico programado...")
+        while True:
+            schedule.run_pending()
+            time.sleep(60)
+    threading.Thread(target=programador, daemon=True).start()
+    
