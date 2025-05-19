@@ -1,137 +1,38 @@
-from .acciones_usuario import router as acciones_router
-from pathlib import Path
-from fastapi import APIRouter
+import os
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from pathlib import Path
+import json
+
+router = APIRouter()
+ARCHIVO = Path(__file__).parent / "usuarios.json"
 
 
-# Modelo que se usa al crear un usuario (sin ID)
-
-
-class UsuarioEntrada(BaseModel):
+class LoginRequest(BaseModel):
     nombre_usuario: str
-    nombre_completo: str
-    correo: str
-    rol: str
-    estado: str
-    contrasena: str
-
-# Modelo que se usa para listar (con ID)
-
-
-class Usuario(BaseModel):
-    id: int
-    nombre_usuario: str
-    nombre_completo: str
-    correo: str
-    rol: str
-    estado: str
     contrasena: str
 
 
-# Rutas de archivos
-ARCHIVO = Path(__file__).parent / "usuarios.csv"
-ARCHIVO_CONTADOR = Path(__file__).parent / "contador_id.txt"
+@router.post("/login")
+def login(datos: LoginRequest):
+    if not os.path.exists(ARCHIVO):
+        raise HTTPException(
+            status_code=500, detail="No se encuentra el archivo de usuarios")
 
-# ruta de usuarios
-router = APIRouter(tags=["Usuarios"])
+    with open(ARCHIVO, "r") as archivo:
+        usuarios = json.load(archivo)
 
-# para generar ID autoincremental
+    for usuario in usuarios.values():
+        if usuario["nombre_usuario"] == datos.nombre_usuario:
+            if usuario["contrasena"] != datos.contrasena:
+                raise HTTPException(
+                    status_code=401, detail="Contrasena incorrecta")
+            if usuario["estado"] != "Activo":
+                raise HTTPException(status_code=403, detail="Usuario inactivo")
+            return {
+                "mensaje": "Login exitoso",
+                "nombre_completo": usuario["nombre_completo"],
+                "rol": usuario["rol"]
+            }
 
-
-def obtener_siguiente_id():
-    if ARCHIVO_CONTADOR.exists():
-        with open(ARCHIVO_CONTADOR, "r") as f:
-            ultimo_id = int(f.read())
-    else:
-        ultimo_id = 0
-    nuevo_id = ultimo_id + 1
-
-    with open(ARCHIVO_CONTADOR, "w") as f:
-        f.write(str(nuevo_id))
-    return nuevo_id
-
-# Ruta para agregar usuario
-
-
-@router.post("/agregar-usuario")
-def agregar_usuario(usuario: UsuarioEntrada):
-    if ARCHIVO.exists():
-        with open(ARCHIVO, "r", encoding="utf-8") as f:
-            lineas = f.readlines()
-            for linea in lineas[1:]:  # Saltar la cabecera
-                partes = linea.strip().split(",")
-                if len(partes) == 7 and partes[1].lower() == usuario.nombre_usuario.lower():
-                    return {"mensaje": "El nombre de usuario ya existe"}
-
-    nuevo_id = obtener_siguiente_id()
-    escribir_cabecera = True
-
-    if ARCHIVO.exists():
-        with open(ARCHIVO, "r", encoding="utf-8") as f:
-            primera_linea = f.readline().strip().lower()
-            if primera_linea == "id,nombre_usuario,nombre_completo,correo,rol,estado,contrasena":
-                escribir_cabecera = False
-
-    with open(ARCHIVO, "a", encoding="utf-8") as f:
-        if escribir_cabecera:
-            f.write(
-                "id,nombre_usuario,nombre_completo,correo,rol,estado,contrasena\n")
-
-        linea = (
-            str(nuevo_id) + "," +
-            usuario.nombre_usuario + "," +
-            usuario.nombre_completo + "," +
-            usuario.correo + "," +
-            usuario.rol + "," +
-            usuario.estado + "," +
-            usuario.contrasena + "\n"
-        )
-
-        f.write(linea)
-
-    return {"mensaje": "Usuario guardado correctamente", "id_asignado": nuevo_id}
-
-
-# Ruta para listar usuarios
-
-
-@router.get("/listar-usuarios")
-def listar_usuarios():
-    lista = []
-
-    if ARCHIVO.exists():
-        with open(ARCHIVO, "r", encoding="utf-8") as f:
-            lineas = f.readlines()
-
-            for linea in lineas[1:]:
-                datos = linea.strip().split(",")
-
-                if len(datos) == 7:
-                    usuario = {
-                        "id": int(datos[0]),
-                        "nombre_usuario": datos[1],
-                        "nombre_completo": datos[2],
-                        "correo": datos[3],
-                        "rol": datos[4],
-                        "estado": datos[5],
-                        "contrasena": datos[6]
-                    }
-                    lista.append(usuario)
-
-    return lista
-
-
-"""
-with open(ARCHIVO, "r", encoding="utf-8") a -> append, newline="" -> quitar lineas en blanco
-
-readline -> primera linea
-lower() -> convierte todo a minuscilas
-
-
-
-"""
-
-"""
-api http://127.0.0.1:8000/docs
-
-"""
+    raise HTTPException(status_code=404, detail="Usuario no encontrado")
