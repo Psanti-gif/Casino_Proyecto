@@ -510,3 +510,45 @@ def ProgramarEnvioAutomatico(name, tipo, maquinas, fecha_in, fecha_fin, df_activ
             time.sleep(60)
     threading.Thread(target=programador, daemon=True).start()
     
+def GenerarReporteParticipacion(
+    df_maquinas,
+    df_actividad,
+    maquinas_seleccionadas,
+    porcentaje_participacion,
+    fecha_inicio,
+    fecha_fin
+):
+    if not maquinas_seleccionadas:
+        print("Debes seleccionar alguna maquina")
+        return
+    
+    df_actividad['fecha'] = pd.to_datetime(df_actividad['fecha'])
+    df_filtrado = df_actividad[
+        (df_actividad['maquina_id'].isin(maquinas_seleccionadas)) &
+        (df_actividad['fecha'] >= pd.to_datetime(fecha_inicio)) &
+        (df_actividad['fecha'] <= pd.to_datetime(fecha_fin))
+    ].copy()
+    
+    if df_filtrado.empty:
+        print("No se encontraron registros")
+        return
+    
+    df_filtrado['UTILIDAD'] = df_filtrado['IN'] - (df_filtrado['OUT'] + df_filtrado['JACKPOT'] + df_filtrado['BILLETERO'])
+    
+    Utilidad_total = df_filtrado['UTILIDAD'].sum()
+    valor_participacion = Utilidad_total * porcentaje_participacion
+    
+    detalle_maquina = df_maquinas[df_maquinas['ID'].isin(maquinas_seleccionadas)].copy()
+    
+    reporte = {
+        'maquinas_incluidas': detalle_maquina,
+        'utilidad_total': Utilidad_total,
+        'porcentaje_participacion': porcentaje_participacion,
+        'valor_participacion': valor_participacion,
+        'detalle_contadores': df_filtrado
+    }
+    print("Reporte de participacion generado correctamente")
+    return reporte
+        
+        
+        
