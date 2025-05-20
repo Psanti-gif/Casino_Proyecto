@@ -141,4 +141,4 @@ def registrar_auditoria(anterior, nuevo: Contador):
     ])
     wb.save(AUDITORIA_EXCEL)
 
-#  uvicorn Registro_Contadores:app --reload
+# uvicorn Registro_Contadores:app --reload
