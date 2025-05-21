@@ -49,7 +49,7 @@ def SeleccionarCasino(
         df = df[df['zona'].str.contains(zona, case=False, na=False)]
     return df.to_dict('records')
     
-@router.get('/fechas_disponibles')            
+@router.get('/fechas-disponibles')            
 def SeleccionarRangoFechas():
     fechas = pd.to_datetime(df_actividad['fecha'])
     return{
@@ -155,7 +155,7 @@ def ReporteGrupal(
     return resumen.to_dict(orient='records')
 
 @router.get('/consolidado')    
-def ReporteConsolidad(
+def ReporteConsolidado(
     maquina_ids: List[int] = Query(...),
     fecha_inicio: date = Query(...),
     fecha_fin: date = Query(...)
@@ -253,7 +253,7 @@ def ExportToPDF(
             'JACKPOT': 'sum',
             'BILLETERO': 'sum'
         }).reset_index()
-        resumen =['UTILIDAD'] = resumen['IN'] - resumen['OUT'] - resumen['JACKPOT'] - resumen['BILLETERO']
+        resumen['UTILIDAD'] = resumen['IN'] - resumen['OUT'] - resumen['JACKPOT'] - resumen['BILLETERO']
         
         for _, fila in resumen.iterrows():
             pdf.set_font('Arial', 'B', 12)
@@ -346,7 +346,7 @@ def ExportToExcel(
         resumen['UTILIDAD'] = resumen['IN'] - resumen['OUT'] - resumen['JACKPOT'] - resumen['BILLETERO']
        
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
-           path = tmp.name()
+           path = tmp.name
            resumen.to_excel(path, index=False)
         return FileResponse(path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename="reporte.xlsx")
     else:
