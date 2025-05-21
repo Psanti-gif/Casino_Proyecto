@@ -104,6 +104,19 @@ def buscar_usuario(nombre_usuario: str):
             return datos
     return {"mensaje": f"No se encontro el usuario: {nombre_usuario}"}
 
+# Buscar usuario por id
+
+
+@router.get("/buscar-usuario-id/{id}")
+def buscar_usuario_por_id(id: int):
+    usuarios = cargar_usuarios()
+    id_str = str(id)
+    if id_str not in usuarios:
+        return {"mensaje": f"No se encontro el usuario con ID {id}"}
+    datos = usuarios[id_str]
+    datos["id"] = id
+    return datos
+
 # Editar usuario por ID
 
 
@@ -124,7 +137,8 @@ def editar_usuario(id: int, datos: UsuarioEditable):
     guardar_usuarios(usuarios)
     return {"mensaje": f"Usuario con ID {id} editado correctamente"}
 
-# Inactivar usuario
+
+# INACTIVAR usuario
 
 
 @router.put("/inactivar-usuario/{id}")
@@ -133,11 +147,12 @@ def inactivar_usuario(id: int):
     id_str = str(id)
     if id_str not in usuarios:
         return {"mensaje": f"No se encontro el usuario con ID {id}"}
-    usuarios[id_str]["estado"] = "inactivo"
+
+    usuarios[id_str]["estado"] = "Inactivo"
     guardar_usuarios(usuarios)
     return {"mensaje": f"Usuario con ID {id} inactivado correctamente"}
 
-# Activar usuario
+# ACTIVAR usuario
 
 
 @router.put("/activar-usuario/{id}")
@@ -146,7 +161,8 @@ def activar_usuario(id: int):
     id_str = str(id)
     if id_str not in usuarios:
         return {"mensaje": f"No se encontro el usuario con ID {id}"}
-    usuarios[id_str]["estado"] = "activo"
+
+    usuarios[id_str]["estado"] = "Activo"
     guardar_usuarios(usuarios)
     return {"mensaje": f"Usuario con ID {id} activado correctamente"}
 

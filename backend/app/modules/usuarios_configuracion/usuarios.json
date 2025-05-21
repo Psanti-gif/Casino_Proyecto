@@ -1,16 +1,58 @@
 {
   "1": {
-    "nombre_usuario": "yair",
-    "nombre_completo": "Yair Mosquera",
-    "contrasena": "1234",
+    "nombre_usuario": "yair.mosquera",
+    "nombre_completo": "Yair Mosquera Murillo",
+    "contrasena": "Soporte",
     "rol": "Admin",
-    "estado": "Activo"
+    "estado": "Activo",
+    "correo": "mosqueramurilloyair@gmail.com"
   },
-  "2": {
-    "nombre_usuario": "operador1",
-    "nombre_completo": "Operador de Prueba",
-    "contrasena": "abcd",
+  "5": {
+    "nombre_usuario": "soporte",
+    "nombre_completo": "Soporte Casino",
+    "correo": "mosqueramurilloyair@gmail.com",
+    "rol": "Support",
+    "estado": "Activo",
+    "contrasena": "Yair12"
+  },
+  "6": {
+    "nombre_usuario": "operador 1",
+    "nombre_completo": "Operador casino medellin",
+    "correo": "medellin@casino.com",
     "rol": "Operator",
-    "estado": "Activo"
+    "estado": "Activo",
+    "contrasena": "operador"
+  },
+  "7": {
+    "nombre_usuario": "operador 2",
+    "nombre_completo": "Operador casino cali",
+    "correo": "cali@casino.com",
+    "rol": "Operator",
+    "estado": "Activo",
+    "contrasena": "operador"
+  },
+  "8": {
+    "nombre_usuario": "prueba",
+    "nombre_completo": "prueba",
+    "correo": "prueba@prueba",
+    "rol": "Support",
+    "estado": "Inactivo",
+    "contrasena": "prueba"
+  },
+  "9": {
+    "nombre_usuario": "prueba2",
+    "nombre_completo": "prueba2",
+    "correo": "prueba2@prueba2",
+    "rol": "Support",
+    "estado": "Inactivo",
+    "contrasena": "prueba2"
+  },
+  "10": {
+    "nombre_usuario": "prueba3",
+    "nombre_completo": "prueba3",
+    "correo": "prueba3@prueba.com",
+    "rol": "Support",
+    "estado": "Activo",
+    "contrasena": "prueba3"
   }
 }
