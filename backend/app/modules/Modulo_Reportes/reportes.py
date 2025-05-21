@@ -5,9 +5,6 @@ from fpdf import FPDF
 import smtplib
 from email.message import EmailMessage
 from email.utils import formataddr
-import schedule
-import threading
-import time
 import os
 
 ######
@@ -16,6 +13,7 @@ from typing import Optional, List
 import pandas as pd
 import tempfile
 from fastapi.responses import FileResponse
+
 
 router =  APIRouter(prefix="/reportes", tags=["Reportes"])
 
@@ -353,118 +351,79 @@ def ExportToExcel(
         return FileResponse(path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename="reporte.xlsx")
     else:
         return {"mensaje": "Tipo de reporte no soportado. Usa Individual, Grupal o Consolidado"}
-       
-  
-       
-def SendEmail(
-    remitente_correo,
-    remitente_nombre,
-    contraseña_app,
-    destinarios,
-    asunto,
-    cuerpo,
-    archivo_adjunto,
-    nombre_mostrado = None,
-    servidor = 'smtp.gmail.com',
-    puerto = 587
-):
-    if not os.path.exists(archivo_adjunto):
-        print(f"El archivo '{archivo_adjunto}' no existe")
-        return
-    
+        
+
+from pydantic import BaseModel
+class correoData(BaseModel):
+    remitente_correo: str
+    remitente_nombre: str
+    contraseña_app: str
+    destinarios: List[str]
+    asunto: str
+    cuerpo: str
+    archivo_adjunto: str
+    nombre_mostrado: Optional[str] = None
+    servidor: str = 'smtp.gmail.com'
+    puerto: int = 587
+
+@router.post('/enviar-correo')
+def EnviarCorreo(data: correoData):
+    if not os.path.exists(data.archivo_adjunto):
+        return {"mensaje": f"El archivo '{data.archivo_adjunto}' no existe"}
+        
     msg = EmailMessage()
-    msg['From'] = formataddr((remitente_nombre or remitente_correo, remitente_correo))
-    msg['To'] = ', '.join(destinarios)
-    msg['Subject'] = asunto
-    msg.set_content(cuerpo)
+    msg['From'] = formataddr((data.remitente_nombre or data.remitente_correo, data.remitente_correo))
+    msg['To'] = ', '.join(data.destinarios)
+    msg['Subject'] = data.asunto
+    msg.set_content(data.cuerpo)
     
-    with open(archivo_adjunto, 'rb') as f:
-        nombre_archivo = nombre_mostrado or os.path.basename(archivo_adjunto)
+    with open(data.archivo_adjunto, 'rb') as f:
+        nombre_archivo = data.nombre_mostrado or os.path.basename(data.archivo_adjunto)
         msg.add_attachment(f.read(), maintype = 'application', subtype = 'octet-stream', filename = nombre_archivo)
     try:
-        with smtplib.SMTP(servidor, puerto) as smtp:
+        with smtplib.SMTP(data.servidor, data.puerto) as smtp:
             smtp.starttls()
-            smtp.login(remitente_correo, contraseña_app)
+            smtp.login(data.remitente_correo, data.contraseña_app)
             smtp.send_message(msg)
-            print(f"Correo enviado a {', '.join(destinarios)}.")
+        return {"mensaje": f"Correo enviado a {', '.join(data.destinarios)}."}
     except Exception as e:
-        print(f"Error al enviar el correo: {e}")
-        
-def ProgramarEnvioAutomatico(name, tipo, maquinas, fecha_in, fecha_fin, df_actividad, correo_destino, frecuencia= 'diario', hora= '08:00'):
-    def tarea():
-        print(f"Ejecutando envio automatico {tipo.upper()} a las {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        
-        if tipo == 'pdf':
-            ExportToPDF(name, maquinas, fecha_in, fecha_fin, 'consolidado', df_actividad)
-        elif tipo == 'excel':
-            ExportToExcel(name, maquinas, fecha_in, fecha_fin, 'consolidado', df_actividad)
-        else:
-            print("Tipo de reporte invalido")
-            return
-        
-        SendEmail(
-            remitente_correo="tucorreo@gmail.com",
-            remitente_nombre="CasinoApp",
-            contraseña_app="tupassword_o_clave_app",
-            destinatarios=correo_destino,
-            asunto=f"Reporte automático ({tipo.upper()})",
-            cuerpo=f"Este es un reporte automático generado por CasinoApp.",
-            archivo_adjunto=name
-        )
+        return {"mensaje": f"Error al enviar el correo {str(e)}"}
     
-    if frecuencia == 'diario':
-        schedule.every().day.at(hora).do(tarea)
-    elif frecuencia == 'semanal':
-        schedule.every().friday.at(hora).do(tarea)
-    elif frecuencia == 'mensual':
-        schedule.every().day.at(hora).do(lambda: tarea() if datetime.now().day == 1 else None)
-    else:
-        print("Frencuencia no soportada")
-        return
+class ParticipacionRequest(BaseModel):
+    maquinas_seleccionadas: list[int]
+    porcentaje_participacion: float
+    fecha_inicio: date
+    fecha_fin: date
     
-    def programador():
-        print("Envio automatico programado...")
-        while True:
-            schedule.run_pending()
-            time.sleep(60)
-    threading.Thread(target=programador, daemon=True).start()
-    
-def GenerarReporteParticipacion(
-    df_maquinas,
-    df_actividad,
-    maquinas_seleccionadas,
-    porcentaje_participacion,
-    fecha_inicio,
-    fecha_fin
-):
-    if not maquinas_seleccionadas:
-        print("Debes seleccionar alguna maquina")
-        return
+@router.post("/participacion")
+def generar_reporte_participacion(data: ParticipacionRequest):
+    if not data.maquinas_seleccionadas:
+        return {"mensaje": "Debes seleccionar al menos una maquina"}
     
     df_actividad['fecha'] = pd.to_datetime(df_actividad['fecha'])
+    
     df_filtrado = df_actividad[
-        (df_actividad['maquina_id'].isin(maquinas_seleccionadas)) &
-        (df_actividad['fecha'] >= pd.to_datetime(fecha_inicio)) &
-        (df_actividad['fecha'] <= pd.to_datetime(fecha_fin))
+        (df_actividad['maquina_id'].isin(data.maquinas_seleccionadas)) &
+        (df_actividad['fecha'] >= pd.to_datetime(data.fecha_inicio)) &
+        (df_actividad['fecha'] <= pd.to_datetime(data.fecha_fin))
     ].copy()
     
     if df_filtrado.empty:
-        print("No se encontraron registros")
-        return
+        return {"mensaje": "No se encontraron registros para los parametros indicados"}
     
-    df_filtrado['UTILIDAD'] = df_filtrado['IN'] - (df_filtrado['OUT'] + df_filtrado['JACKPOT'] + df_filtrado['BILLETERO'])
+    df_filtrado['UTILIDAD'] = df_filtrado['IN'] -(
+        df_filtrado['OUT'] + df_filtrado['JACKPOT'] + df_filtrado['BILLETERO']
+    )
     
-    Utilidad_total = df_filtrado['UTILIDAD'].sum()
-    valor_participacion = Utilidad_total * porcentaje_participacion
+    utilidad_total = df_filtrado['UTILIDAD'].sum()
+    valor_participacion = utilidad_total * data.porcentaje_participacion
     
-    detalle_maquina = df_maquinas[df_maquinas['ID'].isin(maquinas_seleccionadas)].copy()
+    detalle_maquina = df_maquinas[df_maquinas['ID'].isin(data.maquinas_seleccionadas)].copy()
     
-    reporte = {
-        'maquinas_incluidas': detalle_maquina,
-        'utilidad_total': Utilidad_total,
-        'porcentaje_participacion': porcentaje_participacion,
+    return {
+        'maquinas_incluidas': detalle_maquina.to_dict(orient='records'),
+        'utilidad_total': utilidad_total,
+        'porcentaje_participacion': data.porcentaje_participacion,
         'valor_participacion': valor_participacion,
-        'detalle_contadores': df_filtrado
+        'detalle_contadores': df_filtrado.to_dict(orient='records')
     }
-    print("Reporte de participacion generado correctamente")
-    return reporte
