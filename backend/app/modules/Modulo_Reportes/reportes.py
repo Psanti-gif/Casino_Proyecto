@@ -1,6 +1,6 @@
 #ReportesLogic
 from datetime import datetime, date
-from Cargar_Datos import cargar_datos_actividad, cargar_datos_casino
+from .Cargar_Datos import cargar_datos_actividad, cargar_datos_casino
 from fpdf import FPDF
 import smtplib
 from email.message import EmailMessage
@@ -8,13 +8,12 @@ from email.utils import formataddr
 import os
 
 ######
-from fastapi import APIRouter, Query
 from typing import Optional, List
 import pandas as pd
 import tempfile
 from fastapi.responses import FileResponse
 
-
+from fastapi import APIRouter, Query
 router =  APIRouter(prefix="/reportes", tags=["Reportes"])
 
 df_actividad = cargar_datos_actividad()
