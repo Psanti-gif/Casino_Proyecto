@@ -1,6 +1,5 @@
-#Reportes Casino
-from datetime import datetime
-import pandas as pd
+#ReportesLogic
+from datetime import datetime, date
 from Cargar_Datos import cargar_datos_actividad, cargar_datos_casino
 from fpdf import FPDF
 import smtplib
@@ -9,177 +8,92 @@ from email.utils import formataddr
 import schedule
 import threading
 import time
-import mimetypes
 import os
+
+######
+from fastapi import APIRouter, Query
+from typing import Optional, List
+import pandas as pd
+import tempfile
+from fastapi.responses import FileResponse
+
+router =  APIRouter(prefix="/reportes", tags=["Reportes"])
 
 df_actividad = cargar_datos_actividad()
 df_maquinas = cargar_datos_casino()
 
-def SeleccionarMaquina(casino_id = None, incluir_inactivos = False):
-    df = df_maquinas[df_maquinas['casino_id'] == casino_id]
-   
+@router.get("/maquinas")
+def SeleccionarMaquina(
+    casino_id: Optional[int] = Query(None),
+    incluir_inactivos: bool = Query(False),
+    ids_seleccionados: Optional[List[int]] = Query(None)
+):
+    df = df_maquinas.copy()
+    if casino_id is not None:
+        df = df[df['casino_id'] == casino_id]
     if not incluir_inactivos:
-        df = df[df['Estado'].str.lower() == 'activo']
+        df = df[df['Estado'].str.lower() ==  'activo']
+    if ids_seleccionados:
+        df = df[df['ID'].isin(ids_seleccionados)]
         
-    if df.empty:
-        print("No hay maquinas disponibles.")
-        return[]
-    
-    print("Maquinas disponibles:")
-    for i, j in df.iterrows():
-        print(f"{j['ID']}: {j['Nombre']} - {j['Tipo']} - {j['Estado']}")
-        
-    seleccion_id = input("Seleccione las maquinas a través de sus ID's (separelas con coma por favor): ")
-    try:
-        seleccion = [int(x.strip()) for x in seleccion_id.split(',')]
-    except ValueError:
-        print("Entrada invalida.")
-        return []
-    
-    maquinas_seleccionadas = df[df['ID'].isin(seleccion)]
-    if maquinas_seleccionadas.empty:
-        print("No se selecciono maquina, entrada invalida")
-        return []
-    return maquinas_seleccionadas.to_dict('records')
-    
-def SeleccionarCasino(nombre=None, zona= None):
+    return df.to_dict('records')
+
+@router.get('/casinos')
+def SeleccionarCasino(
+    nombre: Optional[str] = Query(None),
+    zona: Optional[str] = Query(None)
+):
     df = df_maquinas[['casino_id', 'casino_nombre', 'zona']].drop_duplicates()
-      
+    
     if nombre:
         df = df[df['casino_nombre'].str.contains(nombre, case=False, na=False)]
-    
     if zona:
         df = df[df['zona'].str.contains(zona, case=False, na=False)]
+    return df.to_dict('records')
     
-    if df.empty:
-        print("No hay casinos que coincidan con los filtros")
-        return None
-    
-    print("Casinos disponibles:")
-    for i, j in df.iterrows():
-        print(f"{j['casino_id']}: {j['casino_nombre']} - {j['zona']}")
-    
-    while True:
-        choice = input("Seleccione el casino por su ID: ")
-        try:
-            if choice in df['casino_id'].values:
-                casino_selec = df[df['casino_id'] == choice].iloc[0]
-                return{
-                    'ID': casino_selec['casino_id'],
-                    'Nombre': casino_selec['casino_nombre'],
-                    'Zona': casino_selec['zona']
-                } 
-            else:
-                print("ID invalido, por favor intente nuevamente.")
-        except ValueError:
-            print("Por favor ingrese un numero valido.")
-            
+@router.get('/fechas_disponibles')            
 def SeleccionarRangoFechas():
-    fechas_disponibles = df_actividad['fecha']
-    fecha_min = fechas_disponibles.min().date()
-    fecha_max = fechas_disponibles.max().date()
+    fechas = pd.to_datetime(df_actividad['fecha'])
+    return{
+        'fecha_min': fechas.min().date(),
+        'fecha_max': fechas.max().date()
+    }
     
-    print(f"\Rango de fechas disponibles en la base de datos: {fecha_min} hasta {fecha_max}")
+@router.get('/maquinas/filtros-avanzados')
+def FiltrosAvanazados(
+    zona: Optional[str] = Query(None),
+    casino: Optional[str] = Query(None),
+    tipo: Optional[str] = Query(None),
+    marca: Optional[str] = Query(None),
+    modelo: Optional[str] = Query(None)
+):
+    df = df_maquinas.copy()
     
-    while True:
-        try:
-            entrada_in = input("Ingrese fecha de inicio (YYYY/MM/DD) o 'Exit' para salir").strip()
-            if entrada_in.lower() == 'Exit':
-                return None, None
-            
-            entrada_end = input("Ingrese la fecha fin (YYYY/MM/DD) o 'Exit' para salir").strip()
-            if entrada_end.lower() == 'Exit':
-                return None, None
-            
-            fecha_inicio = datetime.strptime(entrada_in,"%Y-%m-%d").date()
-            fecha_fin = datetime.strptime(entrada_end, "%Y-%m-%d").date()
-            
-            if fecha_inicio > fecha_fin:
-                print("La fecha de inicio no puede ser posterior a la fecha fin")
-                continue
-            
-            if fecha_inicio < fecha_min or fecha_fin > fecha_max:
-                print(f"Las fechas deben estar dentro del rango {fecha_min} a {fecha_max}")
-                continue
-            
-            return fecha_inicio, fecha_fin
-        except ValueError:
-            print("Formato de fecha incorrecto. Use el sugerido.")
-
-def FiltrosAvanazados(df_maquinas):
-    print("\n<<< Filtros avanzados >>>")
-    
-    zonas_disponibles = df_maquinas['zona'].unique()
-    print(f"Zonas disponibles: {', '.join(zonas_disponibles)}")
-    zona = input("Filtrar por zona (presione ENTER para omitir): ")
     if zona:
-        df_maquinas = df_maquinas[df_maquinas['zona'] == zona]
-    
-    casinos_disponibles = df_maquinas['casino_nombre'].unique()
-    print(f"Casinos disponibles: {', '.join(casinos_disponibles)}")
-    casino = input("Filtrar por casino (presione ENTER para omitir): ")
+        df = df[df['zona'] == zona]
     if casino:
-        df_maquinas = df_maquinas[df_maquinas['casino_nombre'] == casino]
-        
-    tipos_disponibles = df_maquinas['Tipo'].unique()
-    print(f"Tipos de máquinas disponibles: {', '.join(tipos_disponibles)}")
-    tipo = input("Filtrar por tipo de maquina (presione ENTER para omitir): ")
+        df = df[df['casino_nombre'] == casino]
     if tipo:
-        df_maquinas = df_maquinas[df_maquinas['Tipo'] == tipo]
-        
-    marcas_disponibles = df_maquinas['Marca'].unique()
-    print(f"Marcas disponibles: {', '.join(marcas_disponibles)}")
-    marca = input("Filtrar por marca (presione ENTER para omitir): ")
+        df = df[df['Tipo'] == tipo]
     if marca:
-        df_maquinas = df_maquinas[df_maquinas['Marca'] == marca]
-    
-    modelos_disponibles = df_maquinas['Modelo'].unique()
-    print(f"Modelos disponibles: {', '.join(modelos_disponibles)}")   
-    modelo = input("Filtrar por modelo (presione ENTER para omitir): ")
+        df = df[df['Marca'] == marca]
     if modelo:
-        df_maquinas = df_maquinas[df_maquinas['Modelo'] == modelo]
-        
-    if df_maquinas.empty:
-        print("No se encontraron resultados.")
-        return []
-    
-    maquinas_selec = df_maquinas.to_dict('records')
-    print(f"Se seleccionaron {len(maquinas_selec)} maquinas con los filtros seleccionados.")
-    return maquinas_selec
-            
-def GenerarReporte():
-    print("<<< Módulo de Reportes de Casino >>>")
-    
-    maquinas_filtradas = FiltrosAvanazados()
-    
-    if not maquinas_filtradas:
-        print("Cancelando operacion... No se seleccionó un casino.")
-        return
+        df = df[df['Modelo'] == modelo]
+    return df.to_dict('records')
 
-    Fecha_Inicio, Fecha_Fin = SeleccionarRangoFechas()
-    
-    print("\nTipos de reportes disponibles:")
-    print("1. Individual")
-    print("2. Grupal")
-    print("3. Consolidado")
-    TipoReporte = input("Seleccione una opcion: ")
-    
-    if TipoReporte == '1':
-        ReporteIndividual(maquinas_filtradas.to_dict(orient='records'), Fecha_Inicio, Fecha_Fin)
-    elif TipoReporte == '2':
-        ReporteGrupal(maquinas_filtradas.to_dict(orient='records'), Fecha_Inicio, Fecha_Fin)
-    elif TipoReporte == '3':
-        ReporteConsolidado(maquinas_filtradas.to_dict(orient='records'), Fecha_Inicio, Fecha_Fin)
-    else:
-        print("Opcion invalida.")
-        return
-    
-def ReporteIndividual(maquinas, fecha_inicio, fecha_fin):
-    print("\n<<< Reporte individual >>>")
-    for maquina in maquinas:
-        id_maquina = maquina['ID']
-        nombre = maquina['Nombre']
-        tipo = maquina['Tipo']
+router.get('/individual')    
+def ReporteIndividual(
+    maquina_ids: List[int] = Query(...),
+    fecha_inicio: date = Query(...),
+    fecha_fin: date = Query(...)
+):
+    resultados = []
+    for id_maquina in maquina_ids:
+        maquina = df_maquinas[df_maquinas['ID'] == id_maquina]
+        if maquina.empty:
+            continue
+        nombre = maquina.iloc[0]['Nombre']
+        tipo = maquina.iloc[0]['Tipo']
         
         df_filtrada = df_actividad[
             (df_actividad['maquina_id'] == id_maquina) &
@@ -188,7 +102,12 @@ def ReporteIndividual(maquinas, fecha_inicio, fecha_fin):
         ]
         
         if df_filtrada.empty:
-            print(f"\nMaquina ID: {id_maquina} ({nombre}): No hay actividad en el rango de fechas.")
+            resultados.append({
+                'id': id_maquina,
+                'nombre': nombre,
+                'tipo': tipo,
+                'mensaje': 'Sin actividad en el rango de fechas'
+            }) 
             continue
         
         total_in = df_filtrada['IN'].sum()
@@ -197,29 +116,34 @@ def ReporteIndividual(maquinas, fecha_inicio, fecha_fin):
         total_billetero = df_filtrada['BILLETERO'].sum()
         utilidad = total_in - total_out - total_jackpot - total_billetero
         
-        print(f"\nMaquina ID {id_maquina}: {nombre} ({tipo})")
-        print(f"IN: {total_in}")
-        print(f"OUT: {total_out}")
-        print(f"JACKPOT: {total_jackpot}")
-        print(f"BILLETERO: {total_billetero}")
-        print(f"UTILIDAD: {utilidad}")
+        resultados.append({
+            'id': id_maquina,
+            'nombre': nombre,
+            'tipo': tipo,
+            'in': total_in,
+            'out': total_out,
+            'jackpot': total_jackpot,
+            'billetero': total_billetero,
+            'utilidad': utilidad
+        })
+    return resultados
         
-
-def ReporteGrupal(maquinas, fecha_inicio, fecha_fin):
-    print("<<< Reporte grupal por maquina >>>")
+router.get('/grupal')
+def ReporteGrupal(
+    maquina_ids: List[int] = Query(...),
+    fecha_inicio: date = Query(...),
+    fecha_fin: date = Query(...)
+):
+    df_maquinas_filtradas = df_maquinas[df_maquinas['ID'].isin(maquina_ids)]
     
-    df_maquinas_filtradas = pd.DataFrame(maquinas)
-    
-    ids_maquinas = df_maquinas_filtradas['ID'].tolist()
     df_filtrada = df_actividad[
-        (df_actividad['maquina_id'].isin(ids_maquinas)) &
+        (df_actividad['maquina_id'].isin(maquina_ids)) &
         (df_actividad['fecha'] >= fecha_inicio) &
         (df_actividad['fecha'] <=fecha_fin)
     ]
     
     if df_filtrada.empty:
-        print("No hay actividad en el rango de fechas para las maquinas seleccionadas")
-        return
+        return {"mensaje": "No hay actividad en el rango de fechas."}
     
     df_merged = df_filtrada.merge(df_maquinas_filtradas, left_on = 'maquina_id', right_on = 'ID')
     resumen = df_merged.groupby('Tipo').agg({
@@ -230,29 +154,23 @@ def ReporteGrupal(maquinas, fecha_inicio, fecha_fin):
     }).reset_index()
     
     resumen['UTILIDAD'] = resumen['IN'] - resumen['OUT'] - resumen['JACKPOT'] - resumen['BILLETERO']
-    
-    for _, fila in resumen.iterrows():
-        print(f"\nTipo: {fila['Tipo']}")
-        print(f"IN: {fila['IN']}")
-        print(f"OUT: {fila['OUT']}")
-        print(f"JACKPOT: {fila['JACKPOT']}")
-        print(f"BILLETERO: {fila['BILLETERO']}")
-        print(f"UTILIDAD: {fila['UTILIDAD']}")
-    
-def ReporteConsolidado(maquinas, fecha_inicio, fecha_fin):
-    print("<<< Reporte consolidado >>>")
-    
-    ids_maquinas = [i['ID'] for i in maquinas]
+    return resumen.to_dict(orient='records')
+
+@router.get('/consolidado')    
+def ReporteConsolidad(
+    maquina_ids: List[int] = Query(...),
+    fecha_inicio: date = Query(...),
+    fecha_fin: date = Query(...)
+):
     
     df_filtrada = df_actividad[
-        (df_actividad['maquina_id'].isin(ids_maquinas)) &
+        (df_actividad['maquina_id'].isin(maquina_ids)) &
         (df_actividad['fecha'] >= fecha_inicio) &
         (df_actividad['fecha'] <= fecha_fin)
     ]
     
     if df_filtrada.empty:
-        print("No hay datos de actividad en el rango de fechas seleccionado")
-        return
+        return {"mensaje": "No hay datos de actividad en el rango de fechas."}
     
     total_in = df_filtrada['IN'].sum()
     total_out = df_filtrada['OUT'].sum()
@@ -260,42 +178,44 @@ def ReporteConsolidado(maquinas, fecha_inicio, fecha_fin):
     total_billetero = df_filtrada['BILLETERO'].sum()
     utilidad = total_in - total_out - total_jackpot - total_billetero
     
-    print(f"\nRango de fechas: {fecha_inicio.date()} a {fecha_fin.date()}")
-    print(f"Maquinas incluidas: {len(ids_maquinas)}")
-    print(f"IN total: {total_in}")
-    print(f"OUT total: {total_out}")
-    print(f"JACPOT total: {total_jackpot}")
-    print(f"BILLETERO total: {total_billetero}")
-    print(f"UTILIDAD total: {utilidad}")
+    return {
+        'rango_fechas':{
+            'inicio': fecha_inicio,
+            'fin': fecha_fin
+        },
+        'maquinas_incluidas': len(maquina_ids),
+        'in_total': total_in,
+        'out_total': total_out,
+        'jackpot_total': total_jackpot,
+        'billetero_total': total_billetero,
+        'utilidad_total': utilidad
+    }
     
-def ExportToPDF(name, maquinas, fecha_in, fecha_fin, tipo_reporte, df_actividad):
-    tipo_reporte = tipo_reporte.lower()
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font('Arial', size= 12)
+@router.get('/exportar/pdf')
+def ExportToPDF(
+    maquina_ids: List[int] = Query(...),
+    fecha_inicio: date = Query(...),
+    fecha_fin: date = Query(...),
+    tipo_reporte: str = Query(...)
+):
     
-    pdf.set_font('Arial', 'B', 14)
-    pdf.cell(200, 10, txt='REPORTE DE ACTIVIDAD DE MAQUINAS', ln=True, align='C')
-    
-    pdf.set_font('Arial', size=12)
-    pdf.cell(200, 10, txt=f"Tipo de reporte: {tipo_reporte.upper()}", ln=True, align='C')
-    pdf.cell(200, 10, txt=f"Fecha: {fecha_in.date()} a {fecha_fin.date()}", ln=True, align='C')
-    pdf.ln(10)
-    
-    ids_maquinas = [i['ID'] for i in maquinas]
     df_filtrada = df_actividad[
-        (df_actividad['maquina_id'].isin(ids_maquinas)) &
-        (df_actividad['fecha'] >= fecha_in) &
+        (df_actividad['maquina_id'].isin(maquina_ids)) &
+        (df_actividad['fecha'] >= fecha_inicio) &
         (df_actividad['fecha'] <= fecha_fin)
     ]
     
     if df_filtrada.empty:
-        pdf.set_text_color(255, 0, 0)
-        pdf.cell(200, 10, txt='No hay datos de actividad en este rango de fechas', ln=True)
-        pdf.output(name)
-        print(f"PDF generado sin datos: {name}")
-        return
-    pdf.set_text_color(0,0,0)
+        return {"mensaje": "No hay datos de actividad en el rango de fechas"}
+    
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 14)
+    pdf.cell(200, 10, txt='REPORTE DE ACTIVIDAD DE MAQUINAS', ln=True, align='C')
+    pdf.set_font('Arial', size=12)
+    pdf.cell(200, 10, txt=f"Tipo de reporte: {tipo_reporte.upper()}", ln=True, align='C')
+    pdf.cell(200, 10, txt=f"Rango de fechas: {fecha_inicio.date()} a {fecha_fin.date()}", ln=True, align='C')
+    pdf.ln(10)
     
     if tipo_reporte == 'consolidado':
         total_in = df_filtrada['IN'].sum()
@@ -304,8 +224,6 @@ def ExportToPDF(name, maquinas, fecha_in, fecha_fin, tipo_reporte, df_actividad)
         total_billetero = df_filtrada['BILLETERO'].sum()
         utilidad = total_in - total_out - total_jackpot - total_billetero
         
-        pdf.set_text_color(0,0,0)
-        pdf.cell(200, 10, txt=f'Maquinas incluidas: {len(ids_maquinas)}', ln=True)
         pdf.cell(200, 10, txt=f'IN total: {total_in}', ln=True)
         pdf.cell(200, 10, txt=f'OUT total: {total_out}', ln=True)
         pdf.cell(200, 10, txt=f'JACKPOT total: {total_jackpot}', ln=True)
@@ -313,58 +231,65 @@ def ExportToPDF(name, maquinas, fecha_in, fecha_fin, tipo_reporte, df_actividad)
         pdf.cell(200, 10, txt=f'UTILIDAD total: {utilidad}', ln=True)
     
     elif tipo_reporte == 'individual':
-        for i in maquinas:
-            mid = i['ID']
+        for mid in maquina_ids:
             datos = df_filtrada[df_filtrada['maquina_id'] == mid]
             if datos.empty:
                 continue
+            
+            maquina = df_maquinas[df_maquinas['ID'] == mid].iloc[0]
             pdf.set_font('Arial', 'B', 12)
-            pdf.cell(200, 10, txt=f'Maquina ID: {mid}', ln=True)
+            pdf.cell(200, 10, txt=f'Máquina ID: {mid} - {maquina["Nombre"]}', ln=True)
             pdf.set_font('Arial', 'B', size=12)
-            pdf.cell(200, 10, txt=f'Marca: {i['marca']}, Modelo: {i['modelo']}', ln=True)
+            pdf.cell(200, 10, txt=f'Marca: {maquina["Marca"]}, Modelo: {maquina["Modelo"]}', ln=True)
             pdf.cell(200, 10, txt=f'IN: {datos['IN'].sum()}, OUT: {datos['OUT'].sum()}, JACKPOT: {datos['JACKPOT'].sum()}, BILLETERO: {datos['BILLETERO'].sum()}', ln=True)
             utilidad = datos['IN'].sum() - datos['OUT'].sum() - datos['JACKPOT'].sum() - datos['BILLETERO'].sum()
             pdf.cell(200, 10, txt=f'UTILIDAD: {utilidad}', ln=True)
             pdf.ln(5)
     
     elif tipo_reporte == 'grupal':
-        group = df_filtrada.groupby('maquina_id').sum(numeric_only=True)
-        for i in group.index:
-            maquina = next((m for m in maquinas if m['ID'] == i), None)
-            if not maquina:
-                continue
-            row = group.loc[i]
-            utilidad = row['IN'] - row['OUT'] - row['JACKPOT'] - row['BILLETERO']
-            
+        df_maquinas_filtradas = df_maquinas[df_maquinas['ID'].isin(maquina_ids)]
+        df_merged = df_filtrada.merge(df_maquinas_filtradas, left_on='maquina_id', right_on='ID')
+        resumen = df_merged.groupby('Tipo').agg({
+            'IN': 'sum',
+            'OUT': 'sum',
+            'JACKPOT': 'sum',
+            'BILLETERO': 'sum'
+        }).reset_index()
+        resumen =['UTILIDAD'] = resumen['IN'] - resumen['OUT'] - resumen['JACKPOT'] - resumen['BILLETERO']
+        
+        for _, fila in resumen.iterrows():
             pdf.set_font('Arial', 'B', 12)
-            pdf.cell(200, 10, txt=f'Maquina ID: {i}', ln=True)
-            pdf.set_font('Arial', 'B', size=12)
-            pdf.cell(200, 10, txt=f'Marca: {maquina['marca']}, Modelo: {maquina['Modelo']}', ln=True)
-            pdf.cell(200, 10, txt=f"IN: {row['IN']}, OUT: {row['OUT']}, JACKPOT: {row['JACKPOT']}, BILLETERO: {row['BILLETERO']}", ln=True)
-            pdf.cell(200, 10, txt=f'UTILIDAD: {utilidad}', ln=True)
+            pdf.cell(200, 10, txt=f"Tipo: {fila['Tipo']}", ln=True)
+            pdf.set_font('Arial', '', 12)
+            pdf.cell(200, 10, txt=f"IN: {fila['IN']}, OUT: {fila['OUT']}, JACKPOT: {fila['JACKPOT']}, BILLETERO: {fila['BILLETERO']}", ln=True)
+            pdf.cell(200, 10, txt=f"UTILIDAD: {fila['UTILIDAD']}", ln=True)
             pdf.ln(5)
     else:
-        pdf.cell(200, 10, txt='Tipo de reporte no soportado', ln=True)
-            
-    pdf.output(name)
-    print(f"PDF generado exitosamente!: {name}")
+        return {"mensaje": "Tipo de reporte no soportado. Usa Individual, Grupal o Consolidado"}
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+        path = tmp.name
+        pdf.output(path)
     
-def ExportToExcel(name, maquinas, fecha_in, fecha_fin, tipo_reporte, df_actividad):
-    tipo_reporte = tipo_reporte.lower()
-    
-    ids_maquinas = [i['ID'] for i in maquinas]
+    return FileResponse(path, media_type='application/pdf', filename='reporte.pdf')
+
+@router.post("/exportar/excel")
+def ExportToExcel(
+    maquina_ids: List[int] = Query(...),
+    fecha_inicio: date = Query(...),
+    fecha_fin: date = Query(...),
+    tipo_reporte: str = Query(...)
+):
     
     df_filtrada = df_actividad[
-        (df_actividad['maquina_id'].isin(ids_maquinas)) &
-        (df_actividad['fecha'] >= fecha_in) &
+        (df_actividad['maquina_id'].isin(maquina_ids)) &
+        (df_actividad['fecha'] >= fecha_inicio) &
         (df_actividad['fecha'] <= fecha_fin)
     ]
     
     if df_filtrada.empty:
-        print("No hay datos de actividad en este rango de fechas")
-        return
+        return{'mensaje': 'No hay datos de actividad en el rango de fechas'}
     
-    if tipo_reporte == 'consolidado':
+    if tipo_reporte.lower() == 'consolidado':
         total_in = df_filtrada['IN'].sum()
         total_out = df_filtrada['OUT'].sum()
         total_jackpot = df_filtrada['JACKPOT'].sum()
@@ -372,71 +297,65 @@ def ExportToExcel(name, maquinas, fecha_in, fecha_fin, tipo_reporte, df_activida
         utilidad = total_in - total_out - total_jackpot - total_billetero
         
         df_resumen = pd.DataFrame([{
-            'Maquinas incluidas': len(ids_maquinas),
+            'Maquinas incluidas': len(maquina_ids),
             'IN total': total_in,
             'OUT total': total_out,
             'JACKPOT total': total_jackpot,
             'BILLETERO total': total_billetero,
             'UTILIDAD total': utilidad
         }])
-        df_resumen.to_excel(name, index=False)
-        print("Excel generado exitosamente:", name)
-        return
-    
-    elif tipo_reporte == 'individual':
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            path = tmp.name
+            df_resumen.to_excel(path, index=False)
+            
+        return FileResponse(path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename="reporte.xlsx")
+            
+    elif tipo_reporte.lower() == 'individual':
         filas = []
-        for i in maquinas:
-            mid = i['ID']
+        for mid in maquina_ids:
             datos = df_filtrada[df_filtrada['maquina_id'] == mid]
             if datos.empty:
                 continue
-            in_total = datos['IN'].sum()
-            out_total = datos['OUT'].sum()
-            jackpot_total = datos['JACKPOT'].sum()
-            billetero_total = datos['BILLETERO'].sum()
-            utilidad = in_total - out_total - jackpot_total - billetero_total
-            
+            maquina = df_maquinas[df_maquinas['ID'] == mid].iloc[0]
             filas.append({
                 'ID': mid,
-                'Marca': i['Marca'],
-                'Modelo': i['Modelo'],
-                'IN': in_total,
-                'OUT': out_total,
-                'JACKPOT': jackpot_total,
-                'BILLETERO': billetero_total,
-                'UTILIDAD' : utilidad
-            })
-        df_resultado = pd.DataFrame(filas)
-        df_resultado.to_excel(name, index= False)
-        print("Excel generado exitosamente: ", name)
-        return
-    elif tipo_reporte == 'grupal':
-        group = df_filtrada.groupby('maquina_id').sum(numeric_only = True)
-        filas = []
-        for i in group.index:
-            maquina = next((m for m in maquinas if m['ID'] == i), None)
-            if not maquina:
-                continue
-            row = group.loc[i]
-            utilidad = row['IN'] - row['OUT'] - row['JACKPOT'] - row['BILLETERO']
-            
-            filas.append({
-                'ID': i,
+                'Nombre': maquina['Nombre'],
                 'Marca': maquina['Marca'],
                 'Modelo': maquina['Modelo'],
-                'IN': row['IN'],
-                'OUT': row['OUT'],
-                'JACKPOT': row['JACKPOT'],
-                'BILLETERO': row['BILLETERO'],
-                'UTILIDAD': utilidad
+                'IN': datos['IN'].sum(),
+                'OUT':datos['OUT'].sum(),
+                'JACKPOT': datos['JACKPOT'].sum(),
+                'BILLETERO': datos['BILLETERO'].sum(),
+                'UTILIDAD': datos['IN'].sum() - datos['OUT'].sum() - datos['JACKPOT'].sum() - datos['BILLETERO'].sum()
             })
+            
         df_resultado = pd.DataFrame(filas)
-        df_resultado.to_excel(name, index=False)
-        print("Excel generado con exito:", name)
-        return
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+            path = tmp.name
+            df_resultado.to_excel(path, index=False)
+        return FileResponse(path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename="reporte.xlsx")
+    
+    elif tipo_reporte.lower() == 'grupal':
+        df_maquinas_filtradas = df_maquinas[df_maquinas['ID'].isin(maquina_ids)]
+        df_merged = df_filtrada.merge(df_maquinas_filtradas, left_on='maquina_id', right_on='ID')
+        resumen = df_merged.groupby('Tipo').agg({
+            'IN': 'sum',
+            'OUT': 'sum',
+            'JACKPOT': 'sum',
+            'BILLETERO': 'sum'
+        }).reset_index()
+        resumen['UTILIDAD'] = resumen['IN'] - resumen['OUT'] - resumen['JACKPOT'] - resumen['BILLETERO']
+       
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp:
+           path = tmp.name()
+           resumen.to_excel(path, index=False)
+        return FileResponse(path, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', filename="reporte.xlsx")
     else:
-        print("Tipo de reporte no soportado")
-
+        return {"mensaje": "Tipo de reporte no soportado. Usa Individual, Grupal o Consolidado"}
+       
+  
+       
 def SendEmail(
     remitente_correo,
     remitente_nombre,
@@ -549,6 +468,3 @@ def GenerarReporteParticipacion(
     }
     print("Reporte de participacion generado correctamente")
     return reporte
-        
-        
-        
