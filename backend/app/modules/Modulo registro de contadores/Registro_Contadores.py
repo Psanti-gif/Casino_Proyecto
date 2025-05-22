@@ -1,14 +1,15 @@
-
+from pathlib import Path
+import os
 from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from typing import List
 import openpyxl
-import os
 
 app = FastAPI()
 
-ARCHIVO_EXCEL = "registros.xlsx"
-AUDITORIA_EXCEL = "auditoria.xlsx"
+CARPETA_MODULO = Path(__file__).parent
+ARCHIVO_EXCEL = str(CARPETA_MODULO / "registros.xlsx")
+AUDITORIA_EXCEL = str(CARPETA_MODULO / "auditoria.xlsx")
 
 # Modelo de datos
 class Contador(BaseModel):
