@@ -12,6 +12,8 @@ AUDITORIA_EXCEL = str(CARPETA_MODULO / "auditoria.xlsx")
 
 router = APIRouter(tags=["Registro Contadores"])
 # Modelo de datos
+
+
 class Contador(BaseModel):
     fecha: str
     casino: str
@@ -22,17 +24,23 @@ class Contador(BaseModel):
     billetero_contador: float
 
 # Inicializar archivo Excel si no existe
+
+
 def inicializar_excel():
     if not os.path.exists(ARCHIVO_EXCEL):
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.append(["Fecha", "Casino", "Maquina", "In", "Out", "Jackpot", "Billetero"])
+        ws.append(["Fecha", "Casino", "Maquina", "In",
+                  "Out", "Jackpot", "Billetero"])
         wb.save(ARCHIVO_EXCEL)
+
 
 inicializar_excel()
 
 # Guardar nuevo registro
-@app.post("/registrar")
+
+
+@router.post("/registrar")
 def registrar_contador(contador: Contador):
     for valor in [contador.in_contador, contador.out_contador, contador.jackpot_contador, contador.billetero_contador]:
         if valor < 0:
@@ -53,12 +61,14 @@ def registrar_contador(contador: Contador):
     return {"mensaje": "Registro guardado exitosamente"}
 
 # Obtener todos los registros
-@app.get("/registros")
+
+
+@router.get("/registros")
 def obtener_registros():
     wb = openpyxl.load_workbook(ARCHIVO_EXCEL)
     ws = wb.active
     registros = []
-    
+
     for row in ws.iter_rows(min_row=2, values_only=True):
         registros.append({
             "fecha": row[0],
@@ -74,7 +84,9 @@ def obtener_registros():
     return registros
 
 # Buscar por casino y fecha
-@app.get("/buscar/")
+
+
+@router.get("/buscar/")
 def buscar_registros(casino: str = Query(...), fecha: str = Query(...)):
     wb = openpyxl.load_workbook(ARCHIVO_EXCEL)
     ws = wb.active
@@ -93,7 +105,9 @@ def buscar_registros(casino: str = Query(...), fecha: str = Query(...)):
     return resultados
 
 # Modificar registro
-@app.put("/modificar")
+
+
+@router.put("/modificar")
 def modificar_contador(contador: Contador):
     for valor in [contador.in_contador, contador.out_contador, contador.jackpot_contador, contador.billetero_contador]:
         if valor < 0:
@@ -105,7 +119,7 @@ def modificar_contador(contador: Contador):
 
     for row in ws.iter_rows(min_row=2):
         if (row[0].value == contador.fecha and
-            row[1].value == contador.casino ):
+                row[1].value == contador.casino):
 
             anterior = [cell.value for cell in row]
             row[3].value = contador.in_contador
@@ -124,6 +138,8 @@ def modificar_contador(contador: Contador):
     return {"mensaje": "Registro modificado exitosamente"}
 
 # Registrar auditoría
+
+
 def registrar_auditoria(anterior, nuevo: Contador):
     if not os.path.exists(AUDITORIA_EXCEL):
         wb = openpyxl.Workbook()
