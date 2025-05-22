@@ -78,7 +78,7 @@ def FiltrosAvanazados(
         df = df[df['Modelo'] == modelo]
     return df.to_dict('records')
 
-router.get('/individual')    
+@router.get('/individual')    
 def ReporteIndividual(
     maquina_ids: List[int] = Query(...),
     fecha_inicio: date = Query(...),
@@ -125,7 +125,7 @@ def ReporteIndividual(
         })
     return resultados
         
-router.get('/grupal')
+@router.get('/grupal')
 def ReporteGrupal(
     maquina_ids: List[int] = Query(...),
     fecha_inicio: date = Query(...),
