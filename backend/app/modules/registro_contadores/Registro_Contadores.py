@@ -1,16 +1,16 @@
 from pathlib import Path
 import os
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, APIRouter
 from pydantic import BaseModel
 from typing import List
 import openpyxl
 
 app = FastAPI()
-
 CARPETA_MODULO = Path(__file__).parent
 ARCHIVO_EXCEL = str(CARPETA_MODULO / "registros.xlsx")
 AUDITORIA_EXCEL = str(CARPETA_MODULO / "auditoria.xlsx")
 
+router = APIRouter(tags=["Registro Contadores"])
 # Modelo de datos
 class Contador(BaseModel):
     fecha: str
