@@ -1,70 +1,74 @@
-from fastapi import APIRouter, UploadFile, Form, HTTPException
+from fastapi import APIRouter, UploadFile, Form
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-import json
 import shutil
+import json
 
-router = APIRouter(tags=["Configuración del sistema"])
+router = APIRouter(tags=["Configuracion"])
 
-CARPETA = Path(__file__).parent / "media"
+CARPETA = Path(__file__).parent
 ARCHIVO_CONFIG = CARPETA / "configuracion.json"
-ARCHIVO_LOGO = CARPETA / "logo.png"
+MEDIA = CARPETA / "media"
+MEDIA.mkdir(exist_ok=True)
 
-# Asegurar que la carpeta media exista
-CARPETA.mkdir(parents=True, exist_ok=True)
+# Montar carpeta de imágenes
+router.mount("/media", StaticFiles(directory=MEDIA), name="media")
 
-# Leer configuración actual
-
-
-def cargar_configuracion():
-    if ARCHIVO_CONFIG.exists():
-        with ARCHIVO_CONFIG.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-    else:
-        data = {
-            "nombre_aplicacion": "CUADRE CASINO",
-            "logo_url": "logo.png"
-        }
-
-    data["logo_url"] = f"/media/{data.get('logo_url', 'logo.png')}"
-    return data
-
-# Guardar archivo de configuración
-
-
-def guardar_configuracion(data: dict):
-    # Solo se guarda el nombre del logo, no la ruta completa
-    data["logo_url"] = Path(data.get("logo_url", "logo.png")).name
-    with ARCHIVO_CONFIG.open("w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-# GET - obtener configuración
+# Obtener configuración actual
 
 
 @router.get("/configuracion")
 def obtener_configuracion():
-    return cargar_configuracion()
+    if ARCHIVO_CONFIG.exists():
+        with ARCHIVO_CONFIG.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    return {
+        "nombre_empresa": "CUADRE CASINO",
+        "telefono": "",
+        "direccion": "",
+        "nit": "",
+        "color_primario": "#1d4ed8",  # Azul
+        "color_fondo": "#ffffff",
+        "logo_url": ""
+    }
 
-# PUT - actualizar configuración y subir nuevo logo si viene
+# Actualizar configuración
 
 
 @router.put("/configuracion")
-async def actualizar_configuracion(
-    nombre_aplicacion: str = Form(...),
+def guardar_configuracion(
+    nombre_empresa: str = Form(...),
+    telefono: str = Form(""),
+    direccion: str = Form(""),
+    nit: str = Form(""),
+    color_primario: str = Form("#1d4ed8"),
+    color_fondo: str = Form("#ffffff"),
     logo: UploadFile = None
 ):
-    config = cargar_configuracion()
-    config["nombre_aplicacion"] = nombre_aplicacion
+    datos = {
+        "nombre_empresa": nombre_empresa,
+        "telefono": telefono,
+        "direccion": direccion,
+        "nit": nit,
+        "color_primario": color_primario,
+        "color_fondo": color_fondo,
+        "logo_url": ""
+    }
 
     if logo:
-        if logo.content_type not in ["image/png", "image/jpeg"]:
-            raise HTTPException(
-                status_code=400, detail="Formato de imagen no válido")
+        ruta_logo = MEDIA / "logo.png"
+        with open(ruta_logo, "wb") as f:
+            shutil.copyfileobj(logo.file, f)
+        datos["logo_url"] = "/media/logo.png"
+    else:
+        # Mantener logo anterior si existe
+        if ARCHIVO_CONFIG.exists():
+            previo = json.load(ARCHIVO_CONFIG.open("r", encoding="utf-8"))
+            if "logo_url" in previo:
+                datos["logo_url"] = previo["logo_url"]
 
-        # Sobrescribe logo.png
-        with ARCHIVO_LOGO.open("wb") as buffer:
-            shutil.copyfileobj(logo.file, buffer)
+    with ARCHIVO_CONFIG.open("w", encoding="utf-8") as f:
+        json.dump(datos, f, indent=2, ensure_ascii=False)
 
-        config["logo_url"] = "logo.png"
-
-    guardar_configuracion(config)
-    return {"mensaje": "Configuración actualizada correctamente"}
+    return {"mensaje": "Configuración guardada correctamente"}

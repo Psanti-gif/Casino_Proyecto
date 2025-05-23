@@ -15,7 +15,7 @@ ARCHIVO_CODIGOS = Path(__file__).parent / "codigos_recuperacion.json"
 SMTP_SERVIDOR = "smtp.gmail.com"
 SMTP_PUERTO = 587
 SMTP_CORREO = "mosqueramurilloyair@gmail.com"
-SMTP_CLAVE = "oxjoelpmwwkaztps"
+SMTP_CLAVE = "yfdicglayyfmkdfe"
 
 router = APIRouter(tags=["Grupo de sesion"])
 

@@ -3,7 +3,7 @@
     "nombre_usuario": "yair.mosquera",
     "nombre_completo": "Yair Mosquera Murillo",
     "contrasena": "Soporte",
-    "rol": "Admin",
+    "rol": "Support",
     "estado": "Activo",
     "correo": "mosqueramurilloyair@gmail.com"
   },
@@ -20,7 +20,7 @@
     "nombre_completo": "Operador casino medellin",
     "correo": "medellin@casino.com",
     "rol": "Operator",
-    "estado": "Activo",
+    "estado": "Inactivo",
     "contrasena": "operador"
   },
   "7": {
@@ -35,7 +35,7 @@
     "nombre_usuario": "prueba",
     "nombre_completo": "prueba",
     "correo": "prueba@prueba",
-    "rol": "Support",
+    "rol": "Admin",
     "estado": "Inactivo",
     "contrasena": "prueba"
   },

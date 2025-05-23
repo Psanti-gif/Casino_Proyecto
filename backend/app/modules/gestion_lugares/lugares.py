@@ -1,53 +1,129 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List
+from pathlib import Path
+import json
 
-app = FastAPI()
+router = APIRouter(tags=["Gestion de Lugares"])
 
-# Modelo de datos para los casinos
+ARCHIVO = Path(__file__).parent / "lugares.json"
+ARCHIVO_CONTADOR = Path(__file__).parent / "contador_id.txt"
+
+# Modelo de entrada actualizado
 
 
-class Casino(BaseModel):
-    id: int
-    nombre: str
-    direccion: str
+class EntradaLugar(BaseModel):
     codigo: str
-    activo: bool = True
+    nombre_casino: str
+    ciudad: str
+    direccion: str
+    telefono: str
+    persona_encargada: str
+
+# Cargar lugares
 
 
-# Base de datos en memoria (como ejemplo)
-casinos_db = []
+def cargar_lugares():
+    if ARCHIVO.exists() and ARCHIVO.stat().st_size > 0:
+        with ARCHIVO.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+# Guardar lugares
 
 
-@app.post("/casinos/", response_model=Casino)
-def crear_casino(casino: Casino):
-    # Verifica si el código ya existe
-    if any(codigo == casino.codigo for codigo in [c['codigo'] for c in casinos_db]):
-        raise HTTPException(
-            status_code=400, detail="El código de casino ya existe.")
+def guardar_lugares(data):
+    with ARCHIVO.open("w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
 
-    casinos_db.append(casino.dict())
-    return casino
+# ID incremental
 
 
-@app.get("/casinos/", response_model=List[Casino])
-def listar_casinos(activos: bool = True):
-    return [Casino(**casino) for casino in casinos_db if casino["activo"] == activos]
+def obtener_siguiente_id():
+    if ARCHIVO_CONTADOR.exists():
+        ultimo_id = int(ARCHIVO_CONTADOR.read_text())
+    else:
+        ultimo_id = 0
+    nuevo_id = ultimo_id + 1
+    ARCHIVO_CONTADOR.write_text(str(nuevo_id))
+    return nuevo_id
+
+# Agregar lugar
 
 
-@app.put("/casinos/{casino_id}", response_model=Casino)
-def actualizar_casino(casino_id: int, casino_update: Casino):
-    for idx, casino in enumerate(casinos_db):
-        if casino["id"] == casino_id:
-            casinos_db[idx] = casino_update.dict()
-            return casino_update
-    raise HTTPException(status_code=404, detail="Casino no encontrado.")
+@router.post("/agregar-lugar")
+def agregar_lugar(entrada: EntradaLugar):
+    lugares = cargar_lugares()
+
+    for l in lugares.values():
+        if l["codigo"] == entrada.codigo:
+            raise HTTPException(
+                status_code=400, detail="Ya existe un lugar con ese código")
+
+    nuevo_id = obtener_siguiente_id()
+    lugares[str(nuevo_id)] = {
+        "codigo": entrada.codigo,
+        "nombre_casino": entrada.nombre_casino,
+        "ciudad": entrada.ciudad,
+        "direccion": entrada.direccion,
+        "telefono": entrada.telefono,
+        "persona_encargada": entrada.persona_encargada,
+        "estado": "Activo"
+    }
+    guardar_lugares(lugares)
+    return {"mensaje": "Lugar registrado", "id": nuevo_id}
+
+# Listar lugares
 
 
-@app.patch("/casinos/{casino_id}/inactivar", response_model=Casino)
-def inactivar_casino(casino_id: int):
-    for casino in casinos_db:
-        if casino["id"] == casino_id:
-            casino["activo"] = False
-            return Casino(**casino)
-    raise HTTPException(status_code=404, detail="Casino no encontrado.")
+@router.get("/listar-lugares")
+def listar_lugares():
+    lugares = cargar_lugares()
+    resultado = []
+    for id_str, datos in lugares.items():
+        datos["id"] = int(id_str)
+        resultado.append(datos)
+    return resultado
+
+# Editar lugar
+
+
+@router.put("/editar-lugar/{id}")
+def editar_lugar(id: int, datos: EntradaLugar):
+    lugares = cargar_lugares()
+    id_str = str(id)
+    if id_str not in lugares:
+        raise HTTPException(status_code=404, detail="Lugar no encontrado")
+
+    lugares[id_str] = {
+        **datos.dict(),
+        "estado": lugares[id_str]["estado"]  # conservar estado actual
+    }
+
+    guardar_lugares(lugares)
+    return {"mensaje": "Lugar actualizado correctamente"}
+
+# Inactivar lugar
+
+
+@router.put("/inactivar-lugar/{id}")
+def inactivar_lugar(id: int):
+    lugares = cargar_lugares()
+    id_str = str(id)
+    if id_str not in lugares:
+        raise HTTPException(status_code=404, detail="Lugar no encontrado")
+    lugares[id_str]["estado"] = "Inactivo"
+    guardar_lugares(lugares)
+    return {"mensaje": "Lugar inactivado"}
+
+# Activar lugar
+
+
+@router.put("/activar-lugar/{id}")
+def activar_lugar(id: int):
+    lugares = cargar_lugares()
+    id_str = str(id)
+    if id_str not in lugares:
+        raise HTTPException(status_code=404, detail="Lugar no encontrado")
+    lugares[id_str]["estado"] = "Activo"
+    guardar_lugares(lugares)
+    return {"mensaje": "Lugar activado"}

@@ -1,0 +1,29 @@
+{
+  "2": {
+    "codigo": "M1",
+    "nombre_casino": "Casino Medellín",
+    "ciudad": "Medellín",
+    "direccion": "Calle 1 # 123",
+    "telefono": "3232741278",
+    "persona_encargada": "Yair Mosquera Murillo",
+    "estado": "Activo"
+  },
+  "3": {
+    "codigo": "C1",
+    "nombre_casino": "Casino Cali",
+    "ciudad": "Cali",
+    "direccion": "Calle 2 # 234 ",
+    "telefono": "3172741276",
+    "persona_encargada": "Yair Mosquera Murillo",
+    "estado": "Activo"
+  },
+  "4": {
+    "codigo": "M2",
+    "nombre_casino": "Casino Bello",
+    "ciudad": "Bello",
+    "direccion": "Calle 2 # 234 ",
+    "telefono": "3232741278",
+    "persona_encargada": "Daniela Ortiz",
+    "estado": "Activo"
+  }
+}

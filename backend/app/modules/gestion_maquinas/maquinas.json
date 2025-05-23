@@ -1,0 +1,56 @@
+{
+  "1": {
+    "codigo": "M1-1",
+    "activo": 1,
+    "marca": "IGT",
+    "modelo": "S2000",
+    "numero_serie": "IGT-APP-002",
+    "denominacion": 0.01,
+    "casino": "Casino Medellín"
+  },
+  "2": {
+    "codigo": "C1-1",
+    "activo": 1,
+    "marca": "Konami",
+    "modelo": "Lotus Land",
+    "numero_serie": "KONAMI-SIM-001-TEST",
+    "denominacion": 0.05,
+    "casino": "Casino Cali"
+  },
+  "3": {
+    "codigo": "M1-2",
+    "activo": 1,
+    "marca": "Aristocrat",
+    "modelo": "Pompeii",
+    "numero_serie": "NVM-DEV-2024-ABCDEF",
+    "denominacion": 0.25,
+    "casino": "Casino Medellín"
+  },
+  "4": {
+    "codigo": "M1-3",
+    "activo": 1,
+    "marca": "Scientific Games",
+    "modelo": "Hot Shot",
+    "numero_serie": "TESTNUM-ALPHA-007",
+    "denominacion": 0.2,
+    "casino": "Casino Medellín"
+  },
+  "5": {
+    "codigo": "C1-2",
+    "activo": 1,
+    "marca": "Scientific Games",
+    "modelo": "Monopoly",
+    "numero_serie": "APP-DEV-A1B2C3D4",
+    "denominacion": 0.11,
+    "casino": "Casino Cali"
+  },
+  "6": {
+    "codigo": "C1-3",
+    "activo": 1,
+    "marca": "Konami",
+    "modelo": "Jumpin Jalapenos",
+    "numero_serie": "KM-TEST-A10-B20",
+    "denominacion": 0.51,
+    "casino": "Casino Cali"
+  }
+}
