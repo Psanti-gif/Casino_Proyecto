@@ -7,7 +7,7 @@ from app.modules.usuarios_configuracion import acciones_usuario
 from app.modules.usuarios_configuracion import configuracion
 from app.modules.gestion_maquinas import gestion_maquinas
 from app.modules.cuadre_maquina import cuadre_maquina
-from app.modules.Modulo_Reportes import reportes
+from app.modules.modulo_reportes import reportes
 from app.modules.registro_contadores import Registro_Contadores
 from app.modules.gestion_lugares import lugares
 
