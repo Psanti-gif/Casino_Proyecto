@@ -8,14 +8,18 @@ from email.message import EmailMessage
 from email.utils import formataddr
 import os
 
-######
 from typing import Optional, List
 import pandas as pd
 import tempfile
 from fastapi.responses import FileResponse
+from fastapi import APIRouter, Query, HTTPException
 
+<<<<<<< HEAD
 from fastapi import APIRouter, Query
 router = APIRouter(prefix="/reportes", tags=["Reportes"])
+=======
+router =  APIRouter(prefix="/reportes", tags=["Reportes"])
+>>>>>>> 5cdd9ed (Agrego nuevo metodo)
 
 df_actividad = cargar_datos_actividad()
 df_maquinas = cargar_datos_casino()
@@ -376,12 +380,16 @@ def ExportToExcel(
     else:
         return {"mensaje": "Tipo de reporte no soportado. Usa Individual, Grupal o Consolidado"}
 
+<<<<<<< HEAD
+=======
+from pydantic import BaseModel, EmailStr, Field
+>>>>>>> 5cdd9ed (Agrego nuevo metodo)
 
 class correoData(BaseModel):
     remitente_correo: str
-    remitente_nombre: str
-    contraseña_app: str
-    destinarios: List[str]
+    remitente_nombre: str = "Cuadre Casino"
+    contraseña_app: str = Field(..., min_length=10)
+    destinarios: list[EmailStr] = Field(..., min_items=1)
     asunto: str
     cuerpo: str
     archivo_adjunto: str
@@ -389,12 +397,24 @@ class correoData(BaseModel):
     servidor: str = 'smtp.gmail.com'
     puerto: int = 587
 
+<<<<<<< HEAD
 
 @router.post('/enviar-correo')
 def EnviarCorreo(data: correoData):
     if not os.path.exists(data.archivo_adjunto):
         return {"mensaje": f"El archivo '{data.archivo_adjunto}' no existe"}
 
+=======
+@router.post('/enviar-correo', summary="Enviar reporte por correo electrónico")
+def EnviarCorreo(data: correoData):
+    if not os.path.exists(data.archivo_adjunto):
+        raise HTTPException(status_code=400, detail=f"El archivo '{data.archivo_adjunto}' no existe.")
+    if os.path.getsize(data.archivo_adjunto) == 0:
+        raise HTTPException(status_code=400, detail="El archivo adjunto está vacío.")
+    if not data.destinarios:
+        raise HTTPException(status_code=400, detail="Debe proporcionar al menos un destinatario.")
+    
+>>>>>>> 5cdd9ed (Agrego nuevo metodo)
     msg = EmailMessage()
     msg['From'] = formataddr(
         (data.remitente_nombre or data.remitente_correo, data.remitente_correo))
@@ -414,9 +434,14 @@ def EnviarCorreo(data: correoData):
             smtp.send_message(msg)
         return {"mensaje": f"Correo enviado a {', '.join(data.destinarios)}."}
     except Exception as e:
+<<<<<<< HEAD
         return {"mensaje": f"Error al enviar el correo {str(e)}"}
 
 
+=======
+        raise HTTPException(status_code=500, detail=f"Error al enviar el correo: {str(e)}")
+    
+>>>>>>> 5cdd9ed (Agrego nuevo metodo)
 class ParticipacionRequest(BaseModel):
     maquinas_seleccionadas: list[int]
     porcentaje_participacion: float
@@ -457,3 +482,62 @@ def generar_reporte_participacion(data: ParticipacionRequest):
         'valor_participacion': valor_participacion,
         'detalle_contadores': df_filtrado.to_dict(orient='records')
     }
+<<<<<<< HEAD
+=======
+    
+from apscheduler.schedulers.background import BackgroundScheduler
+scheduler = BackgroundScheduler()
+scheduler.start()
+
+class EnvioAutomatico(BaseModel):
+    correo_destino: EmailStr
+    maquinas: list[int]
+    fecha_inicio: date
+    fecha_fin: date
+    tipo_reporte: str
+    formato: str  #PARA PDF O EXCEL
+    remitente_correo: EmailStr
+    remitente_nombre: Optional[str] = "Cuadre Casino"
+    contraseña_app: str
+    asunto: str
+    cuerpo: str
+    hora_envio: str  #FORMATO 24H
+
+@router.post("/programar-envio-automatico")
+def programar_envio_automatico(data: EnvioAutomatico):
+    def tarea():
+        nombre_archivo = f"reporte_{data.tipo_reporte}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+        if data.formato.lower() == "pdf":
+            response = ExportToPDF(
+                maquina_ids=data.maquinas,
+                fecha_inicio=data.fecha_inicio,
+                fecha_fin=data.fecha_fin,
+                tipo_reporte=data.tipo_reporte
+            )
+        elif data.formato.lower() == "excel":
+            response = ExportToExcel(
+                maquina_ids=data.maquinas,
+                fecha_inicio=data.fecha_inicio,
+                fecha_fin=data.fecha_fin,
+                tipo_reporte=data.tipo_reporte
+            )
+        else:
+            return {"mensaje": "Formato no válido. Usa 'pdf' o 'excel'."}
+
+        EnviarCorreo(correoData(
+            remitente_correo=data.remitente_correo,
+            remitente_nombre=data.remitente_nombre,
+            contraseña_app=data.contraseña_app,
+            destinarios=[data.correo_destino],
+            asunto=data.asunto,
+            cuerpo=data.cuerpo,
+            archivo_adjunto=response.path if hasattr(response, 'path') else response.filename,
+            nombre_mostrado=f"{nombre_archivo}.{data.formato}"
+        ))
+
+    hora, minuto = map(int, data.hora_envio.split(":"))
+    scheduler.add_job(tarea, 'cron', hour=hora, minute=minuto, id=f"envio_{datetime.now().timestamp()}")
+
+    return {"mensaje": "Tarea de envío automático programada correctamente"}
+>>>>>>> 5cdd9ed (Agrego nuevo metodo)
