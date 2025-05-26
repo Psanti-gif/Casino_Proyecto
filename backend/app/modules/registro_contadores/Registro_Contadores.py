@@ -3,12 +3,12 @@ import os
 from fastapi import FastAPI, Query, APIRouter
 from pydantic import BaseModel
 from typing import List
-import openpyxl
+import csv
 
 app = FastAPI()
 CARPETA_MODULO = Path(__file__).parent
-ARCHIVO_EXCEL = str(CARPETA_MODULO / "registros.xlsx")
-AUDITORIA_EXCEL = str(CARPETA_MODULO / "auditoria.xlsx")
+ARCHIVO_CSV = str(CARPETA_MODULO / "registros.csv")
+AUDITORIA_CSV = str(CARPETA_MODULO / "auditoria.csv")
 
 router = APIRouter(tags=["Registro Contadores"])
 # Modelo de datos
@@ -23,19 +23,16 @@ class Contador(BaseModel):
     jackpot_contador: float
     billetero_contador: float
 
-# Inicializar archivo Excel si no existe
+# Inicializar archivo CSV si no existe
 
 
-def inicializar_excel():
-    if not os.path.exists(ARCHIVO_EXCEL):
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.append(["Fecha", "Casino", "Maquina", "In",
-                  "Out", "Jackpot", "Billetero"])
-        wb.save(ARCHIVO_EXCEL)
+def inicializar_csv():
+    if not os.path.exists(ARCHIVO_CSV):
+        with open(ARCHIVO_CSV, mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["Fecha", "Casino", "Maquina", "In", "Out", "Jackpot", "Billetero"])
 
-
-inicializar_excel()
+inicializar_csv()
 
 # Guardar nuevo registro
 
@@ -46,18 +43,17 @@ def registrar_contador(contador: Contador):
         if valor < 0:
             return {"error": "Los contadores no pueden tener valores negativos"}
 
-    wb = openpyxl.load_workbook(ARCHIVO_EXCEL)
-    ws = wb.active
-    ws.append([
-        contador.fecha,
-        contador.casino,
-        contador.maquina,
-        contador.in_contador,
-        contador.out_contador,
-        contador.jackpot_contador,
-        contador.billetero_contador
-    ])
-    wb.save(ARCHIVO_EXCEL)
+    with open(ARCHIVO_CSV, mode='a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            contador.fecha,
+            contador.casino,
+            contador.maquina,
+            contador.in_contador,
+            contador.out_contador,
+            contador.jackpot_contador,
+            contador.billetero_contador
+        ])
     return {"mensaje": "Registro guardado exitosamente"}
 
 # Obtener todos los registros
@@ -65,20 +61,19 @@ def registrar_contador(contador: Contador):
 
 @router.get("/registros")
 def obtener_registros():
-    wb = openpyxl.load_workbook(ARCHIVO_EXCEL)
-    ws = wb.active
     registros = []
-
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        registros.append({
-            "fecha": row[0],
-            "casino": row[1],
-            "maquina": row[2],
-            "in": row[3],
-            "out": row[4],
-            "jackpot": row[5],
-            "billetero": row[6]
-        })
+    with open(ARCHIVO_CSV, mode='r', newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            registros.append({
+                "fecha": row["Fecha"],
+                "casino": row["Casino"],
+                "maquina": row["Maquina"],
+                "in": float(row["In"]),
+                "out": float(row["Out"]),
+                "jackpot": float(row["Jackpot"]),
+                "billetero": float(row["Billetero"])
+            })
     if not registros:
         return {"Mensaje": "No hay registros BB"}
     return registros
@@ -88,20 +83,20 @@ def obtener_registros():
 
 @router.get("/buscar/")
 def buscar_registros(casino: str = Query(...), fecha: str = Query(...)):
-    wb = openpyxl.load_workbook(ARCHIVO_EXCEL)
-    ws = wb.active
     resultados = []
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        if row[1] == casino and row[0] == fecha:
-            resultados.append({
-                "fecha": row[0],
-                "casino": row[1],
-                "maquina": row[2],
-                "in": row[3],
-                "out": row[4],
-                "jackpot": row[5],
-                "billetero": row[6]
-            })
+    with open(ARCHIVO_CSV, mode='r', newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row["Casino"] == casino and row["Fecha"] == fecha:
+                resultados.append({
+                    "fecha": row["Fecha"],
+                    "casino": row["Casino"],
+                    "maquina": row["Maquina"],
+                    "in": float(row["In"]),
+                    "out": float(row["Out"]),
+                    "jackpot": float(row["Jackpot"]),
+                    "billetero": float(row["Billetero"])
+                })
     return resultados
 
 # Modificar registro
@@ -113,49 +108,53 @@ def modificar_contador(contador: Contador):
         if valor < 0:
             return {"error": "Los contadores no pueden tener valores negativos"}
 
-    wb = openpyxl.load_workbook(ARCHIVO_EXCEL)
-    ws = wb.active
+    registros = []
     modificado = False
+    anterior = None
 
-    for row in ws.iter_rows(min_row=2):
-        if (row[0].value == contador.fecha and
-                row[1].value == contador.casino):
-
-            anterior = [cell.value for cell in row]
-            row[3].value = contador.in_contador
-            row[4].value = contador.out_contador
-            row[5].value = contador.jackpot_contador
-            row[6].value = contador.billetero_contador
-            modificado = True
-
-            registrar_auditoria(anterior, contador)
-            break
+    # Leer todos los registros
+    with open(ARCHIVO_CSV, mode='r', newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row["Fecha"] == contador.fecha and row["Casino"] == contador.casino:
+                anterior = row.copy()
+                row["In"] = str(contador.in_contador)
+                row["Out"] = str(contador.out_contador)
+                row["Jackpot"] = str(contador.jackpot_contador)
+                row["Billetero"] = str(contador.billetero_contador)
+                modificado = True
+            registros.append(row)
 
     if not modificado:
         return {"error": "Registro no encontrado"}
 
-    wb.save(ARCHIVO_EXCEL)
+    # Escribir todos los registros de nuevo
+    with open(ARCHIVO_CSV, mode='w', newline='', encoding='utf-8') as f:
+        fieldnames = ["Fecha", "Casino", "Maquina", "In", "Out", "Jackpot", "Billetero"]
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(registros)
+
+    registrar_auditoria(anterior, contador)
     return {"mensaje": "Registro modificado exitosamente"}
 
 # Registrar auditoría
 
 
 def registrar_auditoria(anterior, nuevo: Contador):
-    if not os.path.exists(AUDITORIA_EXCEL):
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.append(["fecha", "casino", "maquina", "in_antes", "out_antes", "jackpot_antes", "billetero_antes",
-                   "in_despues", "out_despues", "jackpot_despues", "billetero_despues"])
-        wb.save(AUDITORIA_EXCEL)
-
-    wb = openpyxl.load_workbook(AUDITORIA_EXCEL)
-    ws = wb.active
-    ws.append([
-        anterior[0], anterior[1], anterior[2],
-        anterior[3], anterior[4], anterior[5], anterior[6],
-        nuevo.in_contador, nuevo.out_contador,
-        nuevo.jackpot_contador, nuevo.billetero_contador
-    ])
-    wb.save(AUDITORIA_EXCEL)
+    if not os.path.exists(AUDITORIA_CSV):
+        with open(AUDITORIA_CSV, mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "fecha", "casino", "maquina", "in_antes", "out_antes", "jackpot_antes", "billetero_antes",
+                "in_despues", "out_despues", "jackpot_despues", "billetero_despues"
+            ])
+    with open(AUDITORIA_CSV, mode='a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            anterior["Fecha"], anterior["Casino"], anterior["Maquina"],
+            anterior["In"], anterior["Out"], anterior["Jackpot"], anterior["Billetero"],
+            nuevo.in_contador, nuevo.out_contador, nuevo.jackpot_contador, nuevo.billetero_contador
+        ])
 
 # uvicorn Registro_Contadores:app --reload
