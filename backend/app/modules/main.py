@@ -7,9 +7,9 @@ from app.modules.usuarios_configuracion import acciones_usuario
 from app.modules.usuarios_configuracion import configuracion
 from app.modules.gestion_maquinas import gestion_maquinas
 from app.modules.cuadre_maquina import cuadre_maquina
-from app.modules.modulo_reportes import reportes
 from app.modules.registro_contadores import Registro_Contadores
 from app.modules.gestion_lugares import lugares
+from modulo_reportes import reportes
 
 RUTA_MEDIA = Path(__file__).parent / "usuarios_configuracion" / "media"
 
@@ -19,9 +19,9 @@ app.include_router(acciones_usuario.router)
 app.include_router(configuracion.router)
 app.include_router(gestion_maquinas.router)
 app.include_router(cuadre_maquina.router)
-app.include_router(reportes.router)
 app.include_router(Registro_Contadores.router)
 app.include_router(lugares.router)
+app.include_router(reportes.router)
 
 app.mount("/media", StaticFiles(directory=RUTA_MEDIA), name="media")
 

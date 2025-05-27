@@ -1,7 +1,0 @@
-ID,Nombre,Tipo,Marca,Modelo,Estado,casino_id,casino_nombre,zona
-1,Ruleta 200,Ruleta,Novomatic,R200,Activo,1,Casino Boston,Norte
-2,Blackjack,Juego de mesa,Aristocrat,BJX,Activo,1,Casino Boston,Norte
-3,Zeus,Tragamoneda,IGT,Zeus3000,Inactivo,2,Casino Robledo,Sur
-4,Cleopatra Slot,Tragamoneda,IGT,CleoMax,Activo,2,Casino Robledo,Sur
-5,Ruleta 500,Ruleta,Novomatic,R500,Activo,3,Casino Medellin,Norte
-6,Poker Texas,Juego de mesa,Aristocrat,PTX,Activo,3,Casino Medellin,Norte
