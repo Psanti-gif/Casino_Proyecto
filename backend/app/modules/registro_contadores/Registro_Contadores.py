@@ -22,7 +22,7 @@ class Contador(BaseModel):
     out_contador: float
     jackpot_contador: float
     billetero_contador: float
-    recorte: bool  # Nuevo campo
+    recorte: bool
 
 # Inicializar archivo CSV si no existe
 
@@ -159,5 +159,5 @@ def registrar_auditoria(anterior, nuevo: Contador):
             anterior["In"], anterior["Out"], anterior["Jackpot"], anterior["Billetero"],
             nuevo.in_contador, nuevo.out_contador, nuevo.jackpot_contador, nuevo.billetero_contador
         ])
-
+# si
 # uvicorn Registro_Contadores:app --reload
