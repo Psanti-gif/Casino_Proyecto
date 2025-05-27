@@ -22,6 +22,7 @@ class Contador(BaseModel):
     out_contador: float
     jackpot_contador: float
     billetero_contador: float
+    recorte: bool  # Nuevo campo
 
 # Inicializar archivo CSV si no existe
 
@@ -30,7 +31,7 @@ def inicializar_csv():
     if not os.path.exists(ARCHIVO_CSV):
         with open(ARCHIVO_CSV, mode='w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(["Fecha", "Casino", "Maquina", "In", "Out", "Jackpot", "Billetero"])
+            writer.writerow(["Fecha", "Casino", "Maquina", "In", "Out", "Jackpot", "Billetero", "Recorte"])  # Agregado Recorte
 
 inicializar_csv()
 
@@ -52,7 +53,8 @@ def registrar_contador(contador: Contador):
             contador.in_contador,
             contador.out_contador,
             contador.jackpot_contador,
-            contador.billetero_contador
+            contador.billetero_contador,
+            contador.recorte
         ])
     return {"mensaje": "Registro guardado exitosamente"}
 
@@ -72,7 +74,8 @@ def obtener_registros():
                 "in": float(row["In"]),
                 "out": float(row["Out"]),
                 "jackpot": float(row["Jackpot"]),
-                "billetero": float(row["Billetero"])
+                "billetero": float(row["Billetero"]),
+                "recorte": row.get("Recorte", "False") == "True"
             })
     if not registros:
         return {"Mensaje": "No hay registros BB"}
@@ -95,7 +98,8 @@ def buscar_registros(casino: str = Query(...), fecha: str = Query(...)):
                     "in": float(row["In"]),
                     "out": float(row["Out"]),
                     "jackpot": float(row["Jackpot"]),
-                    "billetero": float(row["Billetero"])
+                    "billetero": float(row["Billetero"]),
+                    "recorte": row.get("Recorte", "False") == "True"  # Nuevo campo
                 })
     return resultados
 
@@ -112,7 +116,6 @@ def modificar_contador(contador: Contador):
     modificado = False
     anterior = None
 
-    # Leer todos los registros
     with open(ARCHIVO_CSV, mode='r', newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -122,15 +125,15 @@ def modificar_contador(contador: Contador):
                 row["Out"] = str(contador.out_contador)
                 row["Jackpot"] = str(contador.jackpot_contador)
                 row["Billetero"] = str(contador.billetero_contador)
+                row["Recorte"] = str(contador.recorte)  # Nuevo campo
                 modificado = True
             registros.append(row)
 
     if not modificado:
         return {"error": "Registro no encontrado"}
 
-    # Escribir todos los registros de nuevo
     with open(ARCHIVO_CSV, mode='w', newline='', encoding='utf-8') as f:
-        fieldnames = ["Fecha", "Casino", "Maquina", "In", "Out", "Jackpot", "Billetero"]
+        fieldnames = ["Fecha", "Casino", "Maquina", "In", "Out", "Jackpot", "Billetero", "Recorte"]  # Agregado Recorte
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(registros)
