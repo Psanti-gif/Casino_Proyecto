@@ -3,7 +3,7 @@ import csv
 from fastapi import APIRouter
 from pydantic import BaseModel
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -22,60 +22,93 @@ def calcular_balance(data: BalanceRequest):
     id_maquina = data.id
     denominacion = data.denominacion
 
-    contador_inicial = contador_final = None
-
+    # Obtener registros
     response = requests.get("http://127.0.0.1:8000/registros")
     if response.status_code != 200:
         return {"error": "No se pudieron obtener los registros"}
     registros = response.json()
 
-    for row in registros:
-        if row.get("maquina") == id_maquina:
-            if row["fecha"] == fecha_inicio:
-                contador_inicial = row
-            if row["fecha"] == fecha_fin:
-                contador_final = row
+    # Filtrar registros de la máquina y fechas en el rango
+    fechas_rango = []
+    fecha_actual = datetime.strptime(fecha_inicio, "%Y-%m-%d")
+    fecha_final = datetime.strptime(fecha_fin, "%Y-%m-%d")
+    while fecha_actual <= fecha_final:
+        fechas_rango.append(fecha_actual.strftime("%Y-%m-%d"))
+        fecha_actual += timedelta(days=1)
 
-    if not contador_inicial or not contador_final:
-        return {"error": f"No se encontraron registros para las fechas o id indicados"}
+    registros_maquina = [r for r in registros if r.get("maquina") == id_maquina and r["fecha"] in fechas_rango]
+    registros_maquina.sort(key=lambda r: r["fecha"])
 
-    def calc_total(final, inicial, campo):
-        return (float(final[campo]) - float(inicial[campo])) * denominacion
+    # Validar que no falte ninguna fecha
+    fechas_encontradas = {r["fecha"] for r in registros_maquina}
+    for fecha in fechas_rango:
+        if fecha not in fechas_encontradas:
+            raise Exception(f"Falta el registro para la fecha {fecha}")
 
-    total_in = calc_total(contador_final, contador_inicial, "in")
-    total_out = calc_total(contador_final, contador_inicial, "out")
-    total_jackpot = calc_total(contador_final, contador_inicial, "jackpot")
-    total_billetero = calc_total(contador_final, contador_inicial, "billetero")
-    utilidad = total_in - (total_out + total_jackpot)
+    # Identificar cortes
+    cortes = []
+    for i, r in enumerate(registros_maquina):
+        if r.get("recorte", "false"):
+            cortes.append(i)
 
-    # Guardar en utilidad_final.csv con la fecha actual
+    # Definir los tramos de cuadre
+    tramos = []
+    inicio = 0
+    for corte_idx in cortes:
+        if corte_idx > inicio:
+            tramos.append((inicio, corte_idx - 1))
+        inicio = corte_idx
+    if inicio < len(registros_maquina) - 1:
+        tramos.append((inicio, len(registros_maquina) - 1))
+
+    # Si no hay cortes, solo un tramo
+    if not tramos:
+        tramos = [(0, len(registros_maquina) - 1)]
+
+    # Guardar resultados de cada cuadre
     csv_path = Path(__file__).parent / "utilidad_final.csv"
     file_exists = csv_path.exists()
-    fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(csv_path, mode="a", newline='', encoding="utf-8") as f:
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow([
                 "utilidad_final", "contador_in", "contador_out", "contador_jackpot",
-                "contador_billetero", "maquina", "casino", "fecha"
+                "contador_billetero", "maquina", "casino", "fecha_inicio", "fecha_fin"
             ])
-        writer.writerow([
-            utilidad,
-            float(contador_final["in"]),
-            float(contador_final["out"]),
-            float(contador_final["jackpot"]),
-            float(contador_final["billetero"]),
-            id_maquina,
-            data.casino,
-            fecha_actual  # ahora se guarda la fecha actual
-        ])
+        resultados = []
+        for tramo in tramos:
+            ini, fin = tramo
+            reg_ini = registros_maquina[ini]
+            reg_fin = registros_maquina[fin]
+            def calc_total(final, inicial, campo):
+                return (float(final[campo]) - float(inicial[campo])) * denominacion
+            total_in = calc_total(reg_fin, reg_ini, "in")
+            total_out = calc_total(reg_fin, reg_ini, "out")
+            total_jackpot = calc_total(reg_fin, reg_ini, "jackpot")
+            total_billetero = calc_total(reg_fin, reg_ini, "billetero")
+            utilidad = total_in - (total_out + total_jackpot)
+            writer.writerow([
+                utilidad,
+                float(reg_fin["in"]),
+                float(reg_fin["out"]),
+                float(reg_fin["jackpot"]),
+                float(reg_fin["billetero"]),
+                id_maquina,
+                data.casino,
+                reg_ini["fecha"],
+                reg_fin["fecha"]
+            ])
+            resultados.append({
+                "fecha_inicio": reg_ini["fecha"],
+                "fecha_fin": reg_fin["fecha"],
+                "total_in": total_in,
+                "total_out": total_out,
+                "total_jackpot": total_jackpot,
+                "total_billetero": total_billetero,
+                "utilidad": utilidad
+            })
 
-    return {
-        "total_in": total_in,
-        "total_out": total_out,
-        "total_jackpot": total_jackpot,
-        "total_billetero": total_billetero
-    }
+    return {"cuadres": resultados}
 
 @router.get("/utilidad_final")
 def obtener_utilidad_final():
