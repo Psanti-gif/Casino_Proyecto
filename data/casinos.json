@@ -1,0 +1,10 @@
+{
+  "casino_1": {
+    "nombre": "Casino Central",
+    "maquinas": ["M001", "M002", "M003"]
+  },
+  "casino_2": {
+    "nombre": "Casino del Sol",
+    "maquinas": ["M004", "M005"]
+  }
+}

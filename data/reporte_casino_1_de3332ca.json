@@ -1,0 +1,15 @@
+{
+    "casino": "Casino Central",
+    "casino_id": "casino_1",
+    "rango_fechas": {
+        "desde": "2024-05-01",
+        "hasta": "2024-05-03"
+    },
+    "totales": {
+        "IN": 4000,
+        "OUT": 3000,
+        "JACKPOT": 400,
+        "BILLETERO": 100
+    },
+    "utilidad": 600
+}
