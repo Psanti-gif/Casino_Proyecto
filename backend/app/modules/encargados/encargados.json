@@ -1,0 +1,14 @@
+{
+  "5": {
+    "nombre": "Yair Mosquera Murillo",
+    "correo": "yair.mosquera@casino.com",
+    "telefono": "53463663",
+    "estado": "Activo"
+  },
+  "6": {
+    "nombre": "Daniela Ortiz",
+    "correo": "daniela.ortiz@casino.com",
+    "telefono": "345678904",
+    "estado": "Activo"
+  }
+}

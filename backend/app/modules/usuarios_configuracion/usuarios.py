@@ -50,7 +50,7 @@ def login(datos: LoginRequest):
     with open(ARCHIVO, "r") as archivo:
         usuarios = json.load(archivo)
 
-    for id_str, usuario in usuarios.items():
+    for id_str, usuario in usuarios.items():  # recorro un diccionario, id_str es la clave y usuario es el valor
         if usuario["nombre_usuario"] == datos.nombre_usuario:
             if usuario["contrasena"] != datos.contrasena:
                 raise HTTPException(

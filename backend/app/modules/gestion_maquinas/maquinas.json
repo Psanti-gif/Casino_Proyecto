@@ -52,5 +52,14 @@
     "numero_serie": "KM-TEST-A10-B20",
     "denominacion": 0.51,
     "casino": "Casino Cali"
+  },
+  "7": {
+    "codigo": "B1-1",
+    "activo": 1,
+    "marca": "Konami",
+    "modelo": "Lotus Land",
+    "numero_serie": "TEST-CASINO-MACHINE-001-ALPHA",
+    "denominacion": 0.02,
+    "casino": "Casino Bello"
   }
 }

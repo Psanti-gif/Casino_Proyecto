@@ -22,7 +22,9 @@ router.mount("/media", StaticFiles(directory=MEDIA), name="media")
 def obtener_configuracion():
     if ARCHIVO_CONFIG.exists():
         with ARCHIVO_CONFIG.open("r", encoding="utf-8") as f:
-            return json.load(f)
+            config = json.load(f)
+            config.setdefault("modo_mantenimiento", False)
+            return config
     return {
         "nombre_empresa": "CUADRE CASINO",
         "telefono": "",
@@ -30,7 +32,8 @@ def obtener_configuracion():
         "nit": "",
         "color_primario": "#1d4ed8",  # Azul
         "color_fondo": "#ffffff",
-        "logo_url": ""
+        "logo_url": "",
+        "modo_mantenimiento": False
     }
 
 # Actualizar configuración
@@ -44,6 +47,7 @@ def guardar_configuracion(
     nit: str = Form(""),
     color_primario: str = Form("#1d4ed8"),
     color_fondo: str = Form("#ffffff"),
+    modo_mantenimiento: bool = Form(False),
     logo: UploadFile = None
 ):
     datos = {
@@ -53,6 +57,7 @@ def guardar_configuracion(
         "nit": nit,
         "color_primario": color_primario,
         "color_fondo": color_fondo,
+        "modo_mantenimiento": modo_mantenimiento,
         "logo_url": ""
     }
 
@@ -62,7 +67,6 @@ def guardar_configuracion(
             shutil.copyfileobj(logo.file, f)
         datos["logo_url"] = "/media/logo.png"
     else:
-        # Mantener logo anterior si existe
         if ARCHIVO_CONFIG.exists():
             previo = json.load(ARCHIVO_CONFIG.open("r", encoding="utf-8"))
             if "logo_url" in previo:
@@ -72,3 +76,44 @@ def guardar_configuracion(
         json.dump(datos, f, indent=2, ensure_ascii=False)
 
     return {"mensaje": "Configuración guardada correctamente"}
+
+# Obtener solo estado de mantenimiento
+
+
+@router.get("/modo-mantenimiento")
+def obtener_modo_mantenimiento():
+    if ARCHIVO_CONFIG.exists():
+        config = json.load(ARCHIVO_CONFIG.open("r", encoding="utf-8"))
+        return {"modo_mantenimiento": config.get("modo_mantenimiento", False)}
+    return {"modo_mantenimiento": False}
+
+# Cambiar estado de mantenimiento
+
+
+@router.put("/modo-mantenimiento")
+def cambiar_modo_mantenimiento(modo: bool = Form(...)):
+    if ARCHIVO_CONFIG.exists():
+        config = json.load(ARCHIVO_CONFIG.open("r", encoding="utf-8"))
+    else:
+        config = {}
+
+    config["modo_mantenimiento"] = modo
+
+    with ARCHIVO_CONFIG.open("w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+
+    return {"mensaje": f"Modo mantenimiento {'activado' if modo else 'desactivado'}"}
+
+
+@router.get("/modo-mantenimiento-off")
+def modo_mantenimiento_off(clave: str):
+    if clave == "admin123":
+        if ARCHIVO_CONFIG.exists():
+            datos = json.load(ARCHIVO_CONFIG.open("r", encoding="utf-8"))
+            datos["modo_mantenimiento"] = False
+            with ARCHIVO_CONFIG.open("w", encoding="utf-8") as f:
+                json.dump(datos, f, indent=2, ensure_ascii=False)
+            return {"mensaje": "Modo mantenimiento desactivado"}
+    return {"mensaje": "Clave incorrecta"}
+
+# hacer peticion a "http://localhost:8000/modo-mantenimiento-off?clave=admin123" para desactivar el mantenimiento
