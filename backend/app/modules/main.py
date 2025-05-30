@@ -41,3 +41,6 @@ app.add_middleware(
 @app.get("/")
 def inicio():
     return {"mensaje": "Api Proyecto Casino"}
+
+
+# uvicorn app.modules.main:app --reload
