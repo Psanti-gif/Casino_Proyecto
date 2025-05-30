@@ -22,6 +22,7 @@ def cuadre_casino(data: CuadreCasinoRequest):
         raise HTTPException(
             status_code=404, detail="No hay registros de contadores")
 
+    # Filtrar registros por casino y rango de fechas
     registros = []
     with open(ARCHIVO_CONTADORES, mode="r", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -43,6 +44,7 @@ def cuadre_casino(data: CuadreCasinoRequest):
                     "jackpot": float(row["Jackpot"]),
                     "billetero": float(row["Billetero"]),
                     "recorte": row.get("Recorte", "False") == "True",
+                    "fecha_dt": fecha
                 })
 
     if not registros:
@@ -57,21 +59,44 @@ def cuadre_casino(data: CuadreCasinoRequest):
         maquinas[r["maquina"]].append(r)
 
     resultado_por_maquina = []
-    for maquina, items in maquinas.items():
-        items_ordenados = sorted(items, key=lambda x: x["fecha"])
-        ini = items_ordenados[0]
-        fin = items_ordenados[-1]
 
-        total_in = fin["in"] - ini["in"]
-        total_out = fin["out"] - ini["out"]
-        total_jackpot = fin["jackpot"] - ini["jackpot"]
-        total_billetero = fin["billetero"] - ini["billetero"]
+    for maquina, items in maquinas.items():
+        items_ordenados = sorted(items, key=lambda x: x["fecha_dt"])
+
+        fragmentos = []
+        actual = []
+
+        for i, reg in enumerate(items_ordenados):
+            if i == 0 or not reg["recorte"]:
+                actual.append(reg)
+            else:
+                if actual:
+                    fragmentos.append(actual)
+                actual = [reg]
+
+        if actual:
+            fragmentos.append(actual)
+
+        total_in = 0
+        total_out = 0
+        total_jackpot = 0
+        total_billetero = 0
+
+        for fragmento in fragmentos:
+            if len(fragmento) >= 2:
+                ini = fragmento[0]
+                fin = fragmento[-1]
+                total_in += fin["in"] - ini["in"]
+                total_out += fin["out"] - ini["out"]
+                total_jackpot += fin["jackpot"] - ini["jackpot"]
+                total_billetero += fin["billetero"] - ini["billetero"]
+
         utilidad = total_in - (total_out + total_jackpot)
 
         resultado_por_maquina.append({
             "maquina": maquina,
-            "fecha_inicio": ini["fecha"],
-            "fecha_fin": fin["fecha"],
+            "fecha_inicio": items_ordenados[0]["fecha"],
+            "fecha_fin": items_ordenados[-1]["fecha"],
             "total_in": total_in,
             "total_out": total_out,
             "total_jackpot": total_jackpot,

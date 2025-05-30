@@ -1,13 +1,3 @@
 fecha,casino,maquina,in_antes,out_antes,jackpot_antes,billetero_antes,in_despues,out_despues,jackpot_despues,billetero_despues
-2025-05-27,Casino Cali,C1-1,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0
-2025-05-28,Casino Cali,C1-1,1.0,1.0,1.0,1.0,1.0,1.0,1.0,2.0
-2025-05-29,Casino Medellín,M1-1,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0
-2025-05-30,Casino Medellín,M1-1,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0
 
-2025-05-21,Casino Medellín,M1-1,1.0,1.0,1.0,1.0,3.0,1.0,1.0,4.0
-2025-05-23,Casino Medellín,M1-1,2.0,4.0,6.0,8.0,2.0,4.0,6.0,8.0
-2025-05-21,Casino Medellín,M1-1,3.0,1.0,1.0,4.0,3.0,1.0,1.0,4.0
-2025-05-23,Casino Medellín,M1-1,2.0,4.0,6.0,8.0,2.0,4.0,6.0,8.0
-2025-05-20,Casino Medellín,M1-1,1.0,2.0,1.0,3.0,2.0,2.0,2.0,2.0
-2025-05-21,Casino Medellín,M1-1,1.0,1.0,1.0,1.0,3.0,3.0,3.0,3.0
-2025-05-20,Casino Medellín,M1-1,2.0,2.0,2.0,2.0,2.0,2.0,2.0,2.0
+2025-05-22,Casino Medellín,M1-1,4.0,4.0,4.0,4.0,4.0,4.0,4.0,5.0
