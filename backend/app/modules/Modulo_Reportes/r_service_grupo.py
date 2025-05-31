@@ -1,7 +1,6 @@
 import requests
 
 class ReportesServiceGrupo:
-
     @staticmethod
     def generar_reporte_grupal(maquinas: list, fecha_inicio: str, fecha_fin: str, denominaciones: dict, casino: str):
         resultados = []
@@ -14,7 +13,7 @@ class ReportesServiceGrupo:
                 "casino": casino,
                 "maquina": codigo,
                 "id": codigo,
-                "denominacion": denominaciones.get(codigo, 1.0)  # valor por defecto por seguridad
+                "denominacion": denominaciones.get(codigo, 1.0) 
             }
 
             try:
@@ -26,7 +25,6 @@ class ReportesServiceGrupo:
             except Exception as e:
                 errores.append({"maquina": codigo, "error": str(e)})
 
-        # Calcular totales agregados
         total_in = sum(r["total_in"] for r in resultados)
         total_out = sum(r["total_out"] for r in resultados)
         total_jackpot = sum(r["total_jackpot"] for r in resultados)
