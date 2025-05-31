@@ -24,13 +24,15 @@ def obtener_configuracion():
         with ARCHIVO_CONFIG.open("r", encoding="utf-8") as f:
             config = json.load(f)
             config.setdefault("modo_mantenimiento", False)
+            config.setdefault("correo", "")
             return config
     return {
         "nombre_empresa": "CUADRE CASINO",
         "telefono": "",
         "direccion": "",
         "nit": "",
-        "color_primario": "#1d4ed8",  # Azul
+        "correo": "",
+        "color_primario": "#1d4ed8",
         "color_fondo": "#ffffff",
         "logo_url": "",
         "modo_mantenimiento": False
@@ -45,6 +47,7 @@ def guardar_configuracion(
     telefono: str = Form(""),
     direccion: str = Form(""),
     nit: str = Form(""),
+    correo: str = Form(""),
     color_primario: str = Form("#1d4ed8"),
     color_fondo: str = Form("#ffffff"),
     modo_mantenimiento: bool = Form(False),
@@ -55,6 +58,7 @@ def guardar_configuracion(
         "telefono": telefono,
         "direccion": direccion,
         "nit": nit,
+        "correo": correo,
         "color_primario": color_primario,
         "color_fondo": color_fondo,
         "modo_mantenimiento": modo_mantenimiento,
@@ -104,6 +108,8 @@ def cambiar_modo_mantenimiento(modo: bool = Form(...)):
 
     return {"mensaje": f"Modo mantenimiento {'activado' if modo else 'desactivado'}"}
 
+# Desactivar mantenimiento con clave
+
 
 @router.get("/modo-mantenimiento-off")
 def modo_mantenimiento_off(clave: str):
@@ -115,5 +121,6 @@ def modo_mantenimiento_off(clave: str):
                 json.dump(datos, f, indent=2, ensure_ascii=False)
             return {"mensaje": "Modo mantenimiento desactivado"}
     return {"mensaje": "Clave incorrecta"}
+
 
 # hacer peticion a "http://localhost:8000/modo-mantenimiento-off?clave=admin123" para desactivar el mantenimiento

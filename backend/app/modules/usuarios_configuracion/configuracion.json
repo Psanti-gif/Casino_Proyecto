@@ -1,8 +1,9 @@
 {
-  "nombre_empresa": "CASINOS Y MAS SAS",
+  "nombre_empresa": "EL RINCON DEL ACIERTO",
   "telefono": "3156704890",
   "direccion": "Carrera 48 # 22 - 37, Torre 1, Of. 908",
   "nit": "900123456-7",
+  "correo": "correo@casino.com",
   "color_primario": "#000000",
   "color_fondo": "#ffffff",
   "modo_mantenimiento": false,
