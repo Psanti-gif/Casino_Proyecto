@@ -248,8 +248,9 @@ POST /reportes/enviar-email?formato=pdf&destinatario=usuario@gmail.com
 
 ## 🧠 Autores
 
-> **Samuel Sánchez**
-> > **Samuel Sánchez**
-> > > **Samuel Sánchez** 
-> Backend Casino-Modulo de reportes
+> **Daniel Carmona Tabares - Modulo registro de contadores**
+> **Juan David Villabona Rocha - Cuadre de maquina**
+> **Samuel Andres Sánchez - Módulo de reportes** 
+> **Daniela Ortiz Quintero-Módulo de Gestión de ubicacione**
+> 
 > 2025
