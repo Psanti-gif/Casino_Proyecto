@@ -13,10 +13,10 @@ Este es un proyecto **fullstack** para la presentación del trabajo final. El pr
 
 ## 🚀 Cómo iniciar
 
-### ✅ Requisitos
+### ✅ Requisitos previos
 
-- Python 3.10+  
-- Node.js 18+  
+- Python 3.10 o superior
+- Node.js 18 o superior
 - npm o yarn
 
 ---
@@ -39,6 +39,117 @@ pip install -r requirements.txt
 # Ejecutar servidor
 uvicorn app.main:app --reload
 ```
+---
+
+---
+# 🎰 CUADRE CASINO
+
+**CUADRE CASINO** es un sistema fullstack desarrollado como parte de un proyecto final académico. Su propósito es gestionar usuarios y generar reportes sobre el uso de máquinas de casino. El backend está construido con **FastAPI**, y el frontend con **Next.js**, con integración de **ReactPy** para componentes interactivos desde Python.
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+CUADRE-CASINO/
+│
+├── backend/               # Servidor FastAPI
+│   ├── app/
+│   │   ├── main.py        # Punto de entrada de la API
+│   │   └── modules/
+│   │       └── usuarios_configuracion.py
+│   ├── usuarios.csv       # Base de datos simple (CSV)
+│   ├── contador_id.txt    # Para IDs autoincrementales
+│   └── requirements.txt
+│
+├── frontend/              # Frontend en Next.js (no incluido aquí)
+│   └── ...
+│
+├── .gitignore             # Ignora entornos y archivos temporales
+└── README.md              # Documentación del proyecto
+```
+---
+
+## ⚙️ Backend (FastAPI + ReactPy)
+
+### 🔧 Instalación y ejecución
+
+```bash
+cd backend
+
+# Crear y activar entorno virtual
+python -m venv venv
+source venv/bin/activate        # Linux/macOS
+venv\Scripts\activate         # Windows
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Ejecutar servidor de desarrollo
+uvicorn app.main:app --reload
+```
+
+Una vez iniciado, accede a:
+- Documentación interactiva: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- Página principal: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+
+---
+
+## 📌 Endpoints principales
+
+- `GET /`: Mensaje de bienvenida
+- `POST /usuarios/`: Agregar nuevo usuario
+- `GET /usuarios/`: Listar usuarios registrados
+
+---
+
+## 🧠 Lógica adicional (CLI)
+
+El proyecto también cuenta con un módulo CLI para generar reportes, con opciones como:
+
+- Selección de casino
+- Filtrado de máquinas disponibles por casino
+- Rango de fechas para reportes
+- Tipos de reporte:
+  - Individual
+  - Grupal
+  - Consolidado
+
+Funciones clave:
+```python
+SeleccionarCasino(nombre=None, zona=None)
+SeleccionarMaquina(casino_id=None, estado=False)
+SeleccionarRangoFechas()
+GenerarReporte()
+```
+
+---
+
+## 📦 Dependencias principales
+
+`requirements.txt`:
+
+```
+fastapi==0.115.12
+reactpy==1.1.0
+uvicorn==0.29.0
+pydantic==2.7.1
+```
+
+---
+
+## 📄 .gitignore
+
+El proyecto ignora:
+
+- Archivos temporales de Python (`__pycache__/`, `*.pyc`)
+- Entornos virtuales (`env/`, `venv/`)
+- Módulos de Node.js (`node_modules/`)
+- Archivos del sistema (`.DS_Store`)
+- Variables de entorno (`.env`)
+- Carpetas de compilación de Next.js (`.next/`, `out/`)
+
+---
 
 ---
 
