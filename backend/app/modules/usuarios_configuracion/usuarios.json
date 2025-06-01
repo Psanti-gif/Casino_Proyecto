@@ -1,27 +1,27 @@
 {
   "1": {
-    "nombre_usuario": "yair.mosquera",
-    "nombre_completo": "Yair Mosquera Murillo",
-    "contrasena": "Soporte",
-    "rol": "Support",
+    "nombre_usuario": "Admin",
+    "nombre_completo": "Adminsitrador",
+    "contrasena": "Admin123",
+    "rol": "Admin",
     "estado": "Activo",
     "correo": "mosqueramurilloyair@gmail.com"
   },
   "5": {
-    "nombre_usuario": "soporte",
-    "nombre_completo": "Soporte Casino",
+    "nombre_usuario": "Soporte",
+    "nombre_completo": "Soporte",
     "correo": "mosqueramurilloyair@gmail.com",
     "rol": "Support",
     "estado": "Activo",
-    "contrasena": "Yair12"
+    "contrasena": "Soporte123"
   },
   "6": {
-    "nombre_usuario": "operador 1",
+    "nombre_usuario": "Operador",
     "nombre_completo": "Operador casino medellin",
-    "correo": "medellin@casino.com",
+    "correo": "mosqueramurilloyair@gmail.com",
     "rol": "Operator",
-    "estado": "Inactivo",
-    "contrasena": "operador"
+    "estado": "Activo",
+    "contrasena": "Operador123"
   },
   "7": {
     "nombre_usuario": "operador 2",
