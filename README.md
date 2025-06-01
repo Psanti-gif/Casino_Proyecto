@@ -40,8 +40,6 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 ---
-
----
 # 🎰 CUADRE CASINO
 
 **CUADRE CASINO** es un sistema fullstack desarrollado como parte de un proyecto final académico. Su propósito es gestionar usuarios y generar reportes sobre el uso de máquinas de casino. El backend está construido con **FastAPI**, y el frontend con **Next.js**, con integración de **ReactPy** para componentes interactivos desde Python.
@@ -151,8 +149,6 @@ El proyecto ignora:
 
 ---
 
----
-
 # 🎰 Módulo de Reportes - Sistema Casino
 
 Este módulo permite **generar**, **exportar**, **visualizar** y **enviar reportes personalizados** sobre el comportamiento de las máquinas de juego en un casino. Integra directamente los datos reales de los contadores y cuadre de máquinas, ofreciendo una herramienta poderosa para análisis operativo, estratégico y auditoría.
@@ -251,6 +247,5 @@ POST /reportes/enviar-email?formato=pdf&destinatario=usuario@gmail.com
 - **Daniel Carmona Tabares - Modulo registro de contadores**
 - **Juan David Villabona Rocha - Modulo Cuadre de maquina**
 - **Samuel Andres Sánchez - Módulo de reportes** 
-- **Daniela Ortiz Quintero - Módulo de Gestión de ubicacione**
-- 
+- **Daniela Ortiz Quintero - Módulo de Gestión de ubicacione** 
 > 2025
