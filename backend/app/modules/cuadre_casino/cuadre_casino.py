@@ -6,8 +6,7 @@ from datetime import datetime
 
 router = APIRouter(tags=["Cuadre casino"])
 
-ARCHIVO_CONTADORES = Path(__file__).parent / \
-    "../registro_contadores/registros.csv"
+ARCHIVO_CONTADORES = Path(__file__).parent / "../registro_contadores/registros.csv"
 
 
 class CuadreCasinoRequest(BaseModel):
@@ -19,8 +18,12 @@ class CuadreCasinoRequest(BaseModel):
 @router.post("/cuadre-casino")
 def cuadre_casino(data: CuadreCasinoRequest):
     if not ARCHIVO_CONTADORES.exists():
-        raise HTTPException(
-            status_code=404, detail="No hay registros de contadores")
+        raise HTTPException(status_code=404, detail="No hay registros de contadores")
+
+    # Determinar si es un solo día
+    fecha_ini = datetime.strptime(data.fecha_inicio, "%Y-%m-%d")
+    fecha_fin = datetime.strptime(data.fecha_fin, "%Y-%m-%d")
+    modo_un_dia = fecha_ini == fecha_fin
 
     # Filtrar registros por casino y rango de fechas
     registros = []
@@ -33,8 +36,6 @@ def cuadre_casino(data: CuadreCasinoRequest):
                 fecha = datetime.strptime(row["Fecha"], "%Y-%m-%d")
             except ValueError:
                 continue
-            fecha_ini = datetime.strptime(data.fecha_inicio, "%Y-%m-%d")
-            fecha_fin = datetime.strptime(data.fecha_fin, "%Y-%m-%d")
             if fecha_ini <= fecha <= fecha_fin:
                 registros.append({
                     "fecha": row["Fecha"],
@@ -48,8 +49,7 @@ def cuadre_casino(data: CuadreCasinoRequest):
                 })
 
     if not registros:
-        raise HTTPException(
-            status_code=404, detail="No se encontraron registros para ese casino y rango de fechas")
+        raise HTTPException(status_code=404, detail="No se encontraron registros para ese casino y rango de fechas")
 
     # Agrupar por máquina
     maquinas = {}
@@ -90,6 +90,12 @@ def cuadre_casino(data: CuadreCasinoRequest):
                 total_out += fin["out"] - ini["out"]
                 total_jackpot += fin["jackpot"] - ini["jackpot"]
                 total_billetero += fin["billetero"] - ini["billetero"]
+            elif len(fragmento) == 1 and modo_un_dia:
+                reg = fragmento[0]
+                total_in += reg["in"]
+                total_out += reg["out"]
+                total_jackpot += reg["jackpot"]
+                total_billetero += reg["billetero"]
 
         utilidad = total_in - (total_out + total_jackpot)
 
@@ -119,3 +125,4 @@ def cuadre_casino(data: CuadreCasinoRequest):
         "detalle_maquinas": resultado_por_maquina,
         "totales": totales
     }
+
