@@ -249,8 +249,8 @@ POST /reportes/enviar-email?formato=pdf&destinatario=usuario@gmail.com
 ## 🧠 Autores
 
 - **Daniel Carmona Tabares - Modulo registro de contadores**
-- **Juan David Villabona Rocha - Cuadre de maquina**
+- **Juan David Villabona Rocha - Modulo Cuadre de maquina**
 - **Samuel Andres Sánchez - Módulo de reportes** 
-- **Daniela Ortiz Quintero-Módulo de Gestión de ubicacione**
+- **Daniela Ortiz Quintero - Módulo de Gestión de ubicacione**
 - 
 > 2025
