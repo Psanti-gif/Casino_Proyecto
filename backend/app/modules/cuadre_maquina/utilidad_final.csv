@@ -1,19 +1,2 @@
-utilidad final, contador in, contador out, contador jackpot, billetero, maquina, casino, fecha
+utilidad_final,contador_in,contador_out,contador_jackpot,contador_billetero,maquina,casino,fecha_inicio,fecha_fin
 
-0.0,1.0,1.0,1.0,1.0,M1-1,Casino Medellín,2025-05-20,2025-05-21
-0.02,3.0,1.0,1.0,4.0,M1-1,Casino Medellín,2025-05-20,2025-05-21
-0.0,1.0,1.0,1.0,1.0,M1-1,Casino Medellín,2025-05-20,2025-05-20
--0.09,2.0,4.0,6.0,8.0,M1-1,Casino Medellín,2025-05-21,2025-05-22
-0.01,1.0,1.0,1.0,1.0,M1-1,Casino Medellín,2025-05-19,2025-05-20
--0.09,2.0,4.0,6.0,8.0,M1-1,Casino Medellín,2025-05-21,2025-05-22
-0.0,1.0,1.0,1.0,1.0,M1-1,Casino Medellín,2025-05-20,2025-05-20
--0.09,2.0,4.0,6.0,8.0,M1-1,Casino Medellín,2025-05-21,2025-05-22
-0.01,1.0,1.0,1.0,1.0,M1-1,Casino Medellín,2025-05-19,2025-05-20
--0.09,2.0,4.0,6.0,8.0,M1-1,Casino Medellín,2025-05-21,2025-05-22
-0.0,1.0,1.0,1.0,1.0,M1-1,Casino Medellín,2025-05-19,2025-05-21
--0.02,3.0,3.0,3.0,3.0,M1-1,Casino Medellín,2025-05-19,2025-05-21
-0.0,1.0,1.0,1.0,2.0,M1-1,Casino Medellín,2025-05-19,2025-05-19
--0.01,3.0,3.0,3.0,3.0,M1-1,Casino Medellín,2025-05-20,2025-05-21
--0.02,4.0,4.0,4.0,4.0,M1-1,Casino Medellín,2025-05-20,2025-05-22
--0.01,5.0,5.0,5.0,5.0,M1-1,Casino Medellín,2025-05-22,2025-05-23
--0.02,4.0,4.0,4.0,4.0,M1-1,Casino Medellín,2025-05-20,2025-05-22
