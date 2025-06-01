@@ -70,6 +70,12 @@ def guardar_usuarios(datos):
 
 @router.post("/agregar-usuario")
 def agregar_usuario(usuario: UsuarioEntrada):
+    # Validar campos vacíos o con solo comillas vacías
+    for campo, valor in usuario.dict().items():
+        limpio = valor.strip().replace('"', '').strip()
+        if not limpio:
+            return {"mensaje": f"El campo '{campo}' no puede estar vacio o contener solo comillas."}
+
     usuarios = cargar_usuarios()
     for u in usuarios.values():
         if u["nombre_usuario"].lower() == usuario.nombre_usuario.lower():
@@ -79,6 +85,7 @@ def agregar_usuario(usuario: UsuarioEntrada):
     usuarios[str(nuevo_id)] = usuario.dict()
     guardar_usuarios(usuarios)
     return {"mensaje": "Usuario guardado correctamente", "id_asignado": nuevo_id}
+
 
 # Listar usuarios
 
