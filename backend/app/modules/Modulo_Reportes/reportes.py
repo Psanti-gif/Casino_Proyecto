@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Query, Body
-from modulo_reportes.r_service_lugares import ReportesServiceLugares
-from modulo_reportes.r_service_maquinas import ReportesServiceMaquinas
-from modulo_reportes.r_service_individual import ReportesServiceIndividual
-from modulo_reportes.r_service_consolidado import ReportesServiceConsolidado
-from modulo_reportes.r_service_grupo import ReportesServiceGrupo
-from modulo_reportes.r_service_participacion import ReportesServiceParticipacion
-from modulo_reportes.exportador_reportes import ExportadorReportes
+from app.modules.modulo_Reportes.r_service_lugares import ReportesServiceLugares
+from app.modules.modulo_Reportes.r_service_maquinas import ReportesServiceMaquinas
+from app.modules.modulo_Reportes.r_service_individual import ReportesServiceIndividual
+from app.modules.modulo_Reportes.r_service_consolidado import ReportesServiceConsolidado
+from app.modules.modulo_Reportes.r_service_grupo import ReportesServiceGrupo
+from app.modules.modulo_Reportes.r_service_participacion import ReportesServiceParticipacion
+from app.modules.modulo_Reportes.exportador_reportes import ExportadorReportes
 from typing import List
 from fastapi.responses import FileResponse
 import os
@@ -142,7 +142,7 @@ def enviar_email_con_adjunto(destinatario, archivo_adjunto, formato):
         smtp.login(remitente, password)
         smtp.send_message(mensaje)
 
-from modulo_reportes.exportador_reportes import exportar_a_pdf, exportar_a_excel
+from app.modules.modulo_Reportes.exportador_reportes import ExportadorReportes
 @router.post("/reportes/enviar-email")
 def enviar_reporte_por_email(
     data: dict = Body(...),
@@ -150,7 +150,7 @@ def enviar_reporte_por_email(
     destinatario: str = Query(...)
 ):
     nombre_archivo = f"reporte_{uuid.uuid4().hex[:8]}"
-    ruta = exportar_a_pdf(data, nombre_archivo) if formato == "pdf" else exportar_a_excel(data, nombre_archivo)
+    ruta = ExportadorReportes.exportar_a_pdf(data, nombre_archivo) if formato == "pdf" else ExportadorReportes.exportar_a_excel(data, nombre_archivo)
 
     try:
         enviar_email_con_adjunto(destinatario, ruta, formato)
@@ -168,7 +168,7 @@ scheduler.start()
 
 def tarea_programada_enviar_reporte(destinatario, formato, data):
     nombre_archivo = f"reporte_{uuid.uuid4().hex[:8]}"
-    ruta = exportar_a_pdf(data, nombre_archivo) if formato == "pdf" else exportar_a_excel(data, nombre_archivo)
+    ruta = ExportadorReportes.exportar_a_pdf(data, nombre_archivo) if formato == "pdf" else ExportadorReportes.exportar_a_excel(data, nombre_archivo)
     enviar_email_con_adjunto(destinatario, ruta, formato)
 
 @router.post("/reportes/programar-envio")

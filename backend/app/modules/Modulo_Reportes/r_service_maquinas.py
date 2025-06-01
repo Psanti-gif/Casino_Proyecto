@@ -1,5 +1,5 @@
-from gestion_maquinas.gestion_maquinas import cargar_maquinas
-from gestion_lugares.lugares import cargar_lugares
+from app.modules.gestion_maquinas.gestion_maquinas import cargar_maquinas
+from app.modules.gestion_lugares.lugares import cargar_lugares
 
 class ReportesServiceMaquinas:
 

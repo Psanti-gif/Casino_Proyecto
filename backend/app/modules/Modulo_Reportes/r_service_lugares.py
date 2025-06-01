@@ -1,4 +1,4 @@
-from gestion_lugares.lugares import cargar_lugares
+from app.modules.gestion_lugares.lugares import cargar_lugares
 
 class ReportesServiceLugares:
 
