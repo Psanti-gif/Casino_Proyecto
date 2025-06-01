@@ -127,3 +127,15 @@ def activar_lugar(id: int):
     lugares[id_str]["estado"] = "Activo"
     guardar_lugares(lugares)
     return {"mensaje": "Lugar activado"}
+
+
+@router.get("/buscar-lugar-id/{id}")
+def buscar_lugar_id(id: int):
+    lugares = cargar_lugares()
+    id_str = str(id)
+    if id_str not in lugares:
+        raise HTTPException(status_code=404, detail="Lugar no encontrado")
+
+    lugar = lugares[id_str]
+    lugar["id"] = id  # incluye el ID en la respuesta
+    return lugar
