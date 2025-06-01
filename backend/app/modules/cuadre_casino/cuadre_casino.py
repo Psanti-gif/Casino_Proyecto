@@ -1,12 +1,17 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel
 from pathlib import Path
+from datetime import datetime, timedelta
 import csv
-from datetime import datetime
+import json
 
 router = APIRouter(tags=["Cuadre casino"])
 
-ARCHIVO_CONTADORES = Path(__file__).parent / "../registro_contadores/registros.csv"
+ARCHIVO_CONTADORES = Path(__file__).parent.parent / \
+    "registro_contadores" / "registros.csv"
+ARCHIVO_MAQUINAS = Path(__file__).parent.parent / \
+    "gestion_maquinas" / "maquinas.json"
+ARCHIVO_UTILIDAD = Path(__file__).parent / "utilidad_final_casino.csv"
 
 
 class CuadreCasinoRequest(BaseModel):
@@ -15,17 +20,33 @@ class CuadreCasinoRequest(BaseModel):
     fecha_fin: str     # formato YYYY-MM-DD
 
 
-@router.post("/cuadre-casino")
+def obtener_denominacion(codigo_maquina: str):
+    if not ARCHIVO_MAQUINAS.exists():
+        return 1  # valor por defecto
+
+    with open(ARCHIVO_MAQUINAS, "r", encoding="utf-8") as f:
+        maquinas = json.load(f)
+        for maquina in maquinas.values():
+            if maquina["codigo"] == codigo_maquina:
+                return float(maquina.get("denominacion", 1))
+    return 1
+
+
+@router.post("/cuadre_casino")
 def cuadre_casino(data: CuadreCasinoRequest):
     if not ARCHIVO_CONTADORES.exists():
-        raise HTTPException(status_code=404, detail="No hay registros de contadores")
+        raise HTTPException(
+            status_code=404, detail="No hay registros de contadores")
 
-    # Determinar si es un solo día
     fecha_ini = datetime.strptime(data.fecha_inicio, "%Y-%m-%d")
     fecha_fin = datetime.strptime(data.fecha_fin, "%Y-%m-%d")
-    modo_un_dia = fecha_ini == fecha_fin
 
-    # Filtrar registros por casino y rango de fechas
+    fechas_rango = []
+    actual = fecha_ini
+    while actual <= fecha_fin:
+        fechas_rango.append(actual.strftime("%Y-%m-%d"))
+        actual += timedelta(days=1)
+
     registros = []
     with open(ARCHIVO_CONTADORES, mode="r", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -49,9 +70,9 @@ def cuadre_casino(data: CuadreCasinoRequest):
                 })
 
     if not registros:
-        raise HTTPException(status_code=404, detail="No se encontraron registros para ese casino y rango de fechas")
+        raise HTTPException(
+            status_code=404, detail="No se encontraron registros para ese casino y rango de fechas")
 
-    # Agrupar por máquina
     maquinas = {}
     for r in registros:
         if r["maquina"] not in maquinas:
@@ -61,41 +82,76 @@ def cuadre_casino(data: CuadreCasinoRequest):
     resultado_por_maquina = []
 
     for maquina, items in maquinas.items():
+        denominacion = obtener_denominacion(maquina)
         items_ordenados = sorted(items, key=lambda x: x["fecha_dt"])
+        registros_por_fecha = {r["fecha"]: r for r in items_ordenados}
+        tramos = []
+        tramo_inicio = None
 
-        fragmentos = []
-        actual = []
+        for idx, fecha in enumerate(fechas_rango):
+            registro = registros_por_fecha.get(fecha)
+            corte = False
+            if registro and str(registro.get("recorte", "False")).lower() == "true":
+                corte = True
 
-        for i, reg in enumerate(items_ordenados):
-            if i == 0 or not reg["recorte"]:
-                actual.append(reg)
+            if fecha in registros_por_fecha:
+                if tramo_inicio is None:
+                    tramo_inicio = fecha
+                if corte and tramo_inicio != fecha:
+                    fecha_anterior = fechas_rango[idx -
+                                                  1] if idx > 0 else fecha
+                    tramos.append((tramo_inicio, fecha_anterior))
+                    tramo_inicio = fecha
+                if idx == len(fechas_rango) - 1 and tramo_inicio is not None:
+                    tramos.append((tramo_inicio, fecha))
             else:
-                if actual:
-                    fragmentos.append(actual)
-                actual = [reg]
+                if tramo_inicio is not None:
+                    fecha_anterior = fechas_rango[idx -
+                                                  1] if idx > 0 else fecha
+                    tramos.append((tramo_inicio, fecha_anterior))
+                    tramo_inicio = None
 
-        if actual:
-            fragmentos.append(actual)
+        total_in = total_out = total_jackpot = total_billetero = utilidad = 0
+        contador_inicial = {"in": 0, "out": 0, "jackpot": 0, "billetero": 0}
+        contador_final = {"in": 0, "out": 0, "jackpot": 0, "billetero": 0}
 
-        total_in = 0
-        total_out = 0
-        total_jackpot = 0
-        total_billetero = 0
+        for tramo in tramos:
+            ini, fin = tramo
+            reg_ini = registros_por_fecha.get(ini)
+            reg_fin = registros_por_fecha.get(fin)
 
-        for fragmento in fragmentos:
-            if len(fragmento) >= 2:
-                ini = fragmento[0]
-                fin = fragmento[-1]
-                total_in += fin["in"] - ini["in"]
-                total_out += fin["out"] - ini["out"]
-                total_jackpot += fin["jackpot"] - ini["jackpot"]
-                total_billetero += fin["billetero"] - ini["billetero"]
-            elif len(fragmento) == 1 and modo_un_dia:
-                reg = fragmento[0]
-                total_in += reg["in"]
-                total_out += reg["out"]
-                total_jackpot += reg["jackpot"]
-                total_billetero += reg["billetero"]
+            if ini == fin or reg_ini is None:
+                inicial = {"in": 0, "out": 0, "jackpot": 0, "billetero": 0}
+                final = {
+                    "in": reg_fin["in"] if reg_fin else 0,
+                    "out": reg_fin["out"] if reg_fin else 0,
+                    "jackpot": reg_fin["jackpot"] if reg_fin else 0,
+                    "billetero": reg_fin["billetero"] if reg_fin else 0,
+                }
+            else:
+                inicial = {
+                    "in": reg_ini["in"],
+                    "out": reg_ini["out"],
+                    "jackpot": reg_ini["jackpot"],
+                    "billetero": reg_ini["billetero"],
+                }
+                final = {
+                    "in": reg_fin["in"],
+                    "out": reg_fin["out"],
+                    "jackpot": reg_fin["jackpot"],
+                    "billetero": reg_fin["billetero"],
+                }
+
+            if tramos.index(tramo) == 0:
+                contador_inicial = inicial
+            contador_final = final
+
+            total_in += (final["in"] - inicial["in"]) * denominacion
+            total_out += (final["out"] - inicial["out"]) * denominacion
+            total_jackpot += (final["jackpot"] -
+                              inicial["jackpot"]) * denominacion
+            total_billetero += (final["billetero"] -
+                                inicial["billetero"]) * denominacion
 
         utilidad = total_in - (total_out + total_jackpot)
 
@@ -103,6 +159,9 @@ def cuadre_casino(data: CuadreCasinoRequest):
             "maquina": maquina,
             "fecha_inicio": items_ordenados[0]["fecha"],
             "fecha_fin": items_ordenados[-1]["fecha"],
+            "contador_inicial": contador_inicial,
+            "contador_final": contador_final,
+            "denominacion": denominacion,
             "total_in": total_in,
             "total_out": total_out,
             "total_jackpot": total_jackpot,
@@ -126,3 +185,26 @@ def cuadre_casino(data: CuadreCasinoRequest):
         "totales": totales
     }
 
+
+@router.post("/guardar-utilidad-casino")
+def guardar_utilidad_casino(payload: dict = Body(...)):
+    file_exists = ARCHIVO_UTILIDAD.exists()
+    with open(ARCHIVO_UTILIDAD, mode="a", newline='', encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow([
+                "casino", "fecha_inicio", "fecha_fin",
+                "total_in", "total_out", "total_jackpot",
+                "total_billetero", "utilidad_total"
+            ])
+        writer.writerow([
+            payload.get("casino", ""),
+            payload.get("fecha_inicio", ""),
+            payload.get("fecha_fin", ""),
+            payload["totales"].get("total_in", 0),
+            payload["totales"].get("total_out", 0),
+            payload["totales"].get("total_jackpot", 0),
+            payload["totales"].get("total_billetero", 0),
+            payload["totales"].get("utilidad_total", 0)
+        ])
+    return {"status": "ok", "archivo": str(ARCHIVO_UTILIDAD)}
