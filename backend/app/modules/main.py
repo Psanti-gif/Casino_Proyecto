@@ -11,7 +11,7 @@ from app.modules.registro_contadores import Registro_Contadores
 from app.modules.gestion_lugares import lugares
 from app.modules.cuadre_casino import cuadre_casino
 from app.modules.encargados import encargados
-from app.modules.modulo_Reportes import reportes
+from app.modules.modulo_reportes import reportes
 
 #PARA PROGRAMAR ENVIO AUTOMATICO (BONUS)
 from apscheduler.schedulers.background import BackgroundScheduler

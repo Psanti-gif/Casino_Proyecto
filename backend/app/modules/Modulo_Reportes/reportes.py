@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Query, Body
-from app.modules.modulo_Reportes.r_service_lugares import ReportesServiceLugares
-from app.modules.modulo_Reportes.r_service_maquinas import ReportesServiceMaquinas
-from app.modules.modulo_Reportes.r_service_individual import ReportesServiceIndividual
-from app.modules.modulo_Reportes.r_service_consolidado import ReportesServiceConsolidado
-from app.modules.modulo_Reportes.r_service_grupo import ReportesServiceGrupo
-from app.modules.modulo_Reportes.r_service_participacion import ReportesServiceParticipacion
-from app.modules.modulo_Reportes.exportador_reportes import ExportadorReportes
+from app.modules.modulo_reportes.r_service_lugares import ReportesServiceLugares
+from app.modules.modulo_reportes.r_service_maquinas import ReportesServiceMaquinas
+from app.modules.modulo_reportes.r_service_individual import ReportesServiceIndividual
+from app.modules.modulo_reportes.r_service_consolidado import ReportesServiceConsolidado
+from app.modules.modulo_reportes.r_service_grupo import ReportesServiceGrupo
+from app.modules.modulo_reportes.r_service_participacion import ReportesServiceParticipacion
+from app.modules.modulo_reportes.exportador_reportes import ExportadorReportes
 from typing import List
 from fastapi.responses import FileResponse
 import os
@@ -142,7 +142,7 @@ def enviar_email_con_adjunto(destinatario, archivo_adjunto, formato):
         smtp.login(remitente, password)
         smtp.send_message(mensaje)
 
-from app.modules.modulo_Reportes.exportador_reportes import ExportadorReportes
+from app.modules.modulo_reportes.exportador_reportes import ExportadorReportes
 @router.post("/reportes/enviar-email")
 def enviar_reporte_por_email(
     data: dict = Body(...),
