@@ -78,7 +78,7 @@ def obtener_registros():
                 "recorte": row.get("Recorte", "False") == "True"
             })
     if not registros:
-        return {"Mensaje": "No hay registros BB"}
+        return {"Mensaje": "No hay registros"}
     return registros
 
 # Buscar por casino y fecha
