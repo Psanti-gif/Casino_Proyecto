@@ -246,8 +246,10 @@ POST /reportes/enviar-email?formato=pdf&destinatario=usuario@gmail.com
 
 ---
 
-## 🧠 Autor
+## 🧠 Autores
 
-> **Samuel Sánchez**  
+> **Samuel Sánchez**
+> > **Samuel Sánchez**
+> > > **Samuel Sánchez** 
 > Backend Casino-Modulo de reportes
 > 2025
