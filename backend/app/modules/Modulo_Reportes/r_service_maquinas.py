@@ -15,7 +15,6 @@ class ReportesServiceMaquinas:
         resultado = []
 
         for maquina in maquinas.values():
-            # Filtros por atributos técnicos
             if marca and maquina["marca"].lower() != marca.lower():
                 continue
             if modelo and maquina["modelo"].lower() != modelo.lower():
@@ -23,7 +22,6 @@ class ReportesServiceMaquinas:
             if casino and maquina["casino"].lower() != casino.lower():
                 continue
 
-            # Buscar ciudad por nombre del casino
             lugar = next(
                 (l for l in lugares.values()
                  if l["nombre_casino"].lower() == maquina["casino"].lower()),
@@ -34,7 +32,6 @@ class ReportesServiceMaquinas:
             if ciudad and ciudad_maquina.lower() != ciudad.lower():
                 continue
 
-            # Agregar datos a la lista de resultados
             resultado.append({
                 "codigo": maquina["codigo"],
                 "marca": maquina["marca"],
