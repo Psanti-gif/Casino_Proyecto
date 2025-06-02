@@ -54,5 +54,13 @@
     "rol": "Support",
     "estado": "Activo",
     "contrasena": "prueba3"
+  },
+  "13": {
+    "nombre_usuario": "yair.mosquera",
+    "nombre_completo": "Yair Mosquera Murillo",
+    "correo": "mosqueramurilloyair@gmail.com",
+    "rol": "Support",
+    "estado": "Activo",
+    "contrasena": "Soporte"
   }
 }
