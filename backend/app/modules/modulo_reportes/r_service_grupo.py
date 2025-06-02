@@ -1,10 +1,11 @@
 import requests
+from fastapi import HTTPException
 
 class ReportesServiceGrupo:
+
     @staticmethod
-    def generar_reporte_grupal(maquinas: list, fecha_inicio: str, fecha_fin: str, denominaciones: dict, casino: str):
+    def generar_reporte_grupo(fecha_inicio: str, fecha_fin: str, casino: str, maquinas: list, denominacion: float):
         resultados = []
-        errores = []
 
         for codigo in maquinas:
             payload = {
@@ -13,35 +14,17 @@ class ReportesServiceGrupo:
                 "casino": casino,
                 "maquina": codigo,
                 "id": codigo,
-                "denominacion": denominaciones.get(codigo, 1.0) 
+                "denominacion": denominacion
             }
 
             try:
                 resp = requests.post("http://127.0.0.1:8000/cuadre_maquina", json=payload)
                 if resp.status_code == 200:
-                    resultados.extend(resp.json().get("cuadres", []))
+                    cuadre = resp.json().get("cuadres", [])
+                    resultados.extend(cuadre)
                 else:
-                    errores.append({"maquina": codigo, "error": resp.json()})
+                    raise HTTPException(status_code=500, detail=f"Error al consultar máquina {codigo}")
             except Exception as e:
-                errores.append({"maquina": codigo, "error": str(e)})
+                raise HTTPException(status_code=500, detail=f"Excepción al procesar máquina {codigo}: {str(e)}")
 
-        total_in = sum(r["total_in"] for r in resultados)
-        total_out = sum(r["total_out"] for r in resultados)
-        total_jackpot = sum(r["total_jackpot"] for r in resultados)
-        total_billetero = sum(r["total_billetero"] for r in resultados)
-        utilidad_total = sum(r["utilidad"] for r in resultados)
-
-        return {
-            "fecha_inicio": fecha_inicio,
-            "fecha_fin": fecha_fin,
-            "casino": casino,
-            "detalle_maquinas": resultados,
-            "totales_grupo": {
-                "total_in": total_in,
-                "total_out": total_out,
-                "total_jackpot": total_jackpot,
-                "total_billetero": total_billetero,
-                "utilidad_total": utilidad_total
-            },
-            "errores": errores
-        }
+        return {"registros": resultados}
