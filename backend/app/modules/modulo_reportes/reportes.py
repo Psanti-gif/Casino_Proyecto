@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, Body
+from fastapi import APIRouter, Query, Body, HTTPException
 from app.modules.modulo_reportes.r_service_lugares import ReportesServiceLugares
 from app.modules.modulo_reportes.r_service_maquinas import ReportesServiceMaquinas
 from app.modules.modulo_reportes.r_service_individual import ReportesServiceIndividual
@@ -13,26 +13,46 @@ import uuid
 
 router = APIRouter(tags=["Modulo de Reportes"])
 
-#Reporte de casinos por ciudad
-@router.get("/reportes/casinos")
-def obtener_casinos(ciudad: str = Query(None)):
-    return ReportesServiceLugares.obtener_casinos(ciudad=ciudad)
-
-#Reporte de maquina por filtros avanzados
-@router.get("/reportes/maquinas")
-def filtrar_maquinas(
-    marca: str = Query(None),
-    modelo: str = Query(None),
-    casino: str = Query(None),
-    ciudad: str = Query(None)
+# ✅ Consolidado
+@router.get("/reportes/generar")
+def generar_reporte_consolidado_general(
+    fecha_inicio: str = Query(...),
+    fecha_fin: str = Query(...),
+    casino: str = Query("Todos")
 ):
-    return ReportesServiceMaquinas.filtrar_maquinas(
-        marca=marca,
-        modelo=modelo,
+    registros_totales = []
+
+    if casino == "Todos":
+        casinos_disponibles = ReportesServiceLugares.obtener_casinos()
+
+        for c in casinos_disponibles:
+            nombre_casino = c["nombre"] if isinstance(c, dict) else c
+            registros = ReportesServiceConsolidado.generar_reporte_consolidado(
+                casino=nombre_casino,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin
+            )
+            if isinstance(registros, list):
+                registros_totales.extend(registros)
+            else:
+                print(f"[ERROR] Reporte fallido para {c}: {registros}")
+
+        return {"registros": registros_totales}
+
+    resultado = ReportesServiceConsolidado.generar_reporte_consolidado(
         casino=casino,
-        ciudad=ciudad
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin
     )
-    
+
+    if isinstance(resultado, dict) and "registros" in resultado:
+        return {"registros": resultado["registros"]}
+    elif isinstance(resultado, list):
+        return {"registros": resultado}
+    else:
+        raise HTTPException(status_code=500, detail="Error al generar el reporte consolidado")
+
+# ✅ Individual
 @router.get("/reportes/individual")
 def obtener_reporte_individual(
     fecha_inicio: str = Query(...),
@@ -48,56 +68,43 @@ def obtener_reporte_individual(
         maquina=maquina,
         denominacion=denominacion
     )
-    
 
-@router.get("/reportes/consolidado")
-def obtener_reporte_consolidado(
-    casino: str = Query(...),
-    fecha_inicio: str = Query(...),
-    fecha_fin: str = Query(...)
-):
-    return ReportesServiceConsolidado.generar_reporte_consolidado(
-        casino=casino,
-        fecha_inicio=fecha_inicio,
-        fecha_fin=fecha_fin
-    )
-
-
+# ✅ Grupo
 @router.post("/reportes/grupo")
-def obtener_reporte_por_grupo(
+def obtener_reporte_grupo(
+    fecha_inicio: str = Body(...),
+    fecha_fin: str = Body(...),
+    casino: str = Body(...),
     maquinas: List[str] = Body(...),
-    fecha_inicio: str = Query(...),
-    fecha_fin: str = Query(...),
-    casino: str = Query(...),
-    denominaciones: dict = Body(...)
+    denominacion: float = Body(...)
 ):
-    return ReportesServiceGrupo.generar_reporte_grupal(
-        maquinas=maquinas,
+    return ReportesServiceGrupo.generar_reporte_grupo(
         fecha_inicio=fecha_inicio,
         fecha_fin=fecha_fin,
-        denominaciones=denominaciones,
-        casino=casino
+        casino=casino,
+        maquinas=maquinas,
+        denominacion=denominacion
     )
-    
+
+# ✅ Participación
 @router.post("/reportes/participacion")
 def obtener_reporte_participacion(
+    fecha_inicio: str = Body(...),
+    fecha_fin: str = Body(...),
+    casino: str = Body(...),
     maquinas: List[str] = Body(...),
-    fecha_inicio: str = Query(...),
-    fecha_fin: str = Query(...),
-    casino: str = Query(...),
-    denominaciones: dict = Body(...),
-    porcentaje: float = Query(...)
+    denominacion: float = Body(...),
+    porcentaje: float = Body(...)
 ):
     return ReportesServiceParticipacion.generar_reporte_participacion(
-        maquinas=maquinas,
         fecha_inicio=fecha_inicio,
         fecha_fin=fecha_fin,
-        denominaciones=denominaciones,
         casino=casino,
-        porcentaje = porcentaje
+        maquinas=maquinas,
+        denominacion=denominacion,
+        porcentaje=porcentaje
     )
     
-
 @router.post("/reportes/exportar")
 def exportar_reporte(
     data: dict = Body(...),
@@ -105,6 +112,34 @@ def exportar_reporte(
 ):
     nombre_archivo = f"reporte_{uuid.uuid4().hex[:8]}"
 
+    # 🔧 Asegurar compatibilidad con el exportador
+    if "registros" in data:
+        data["detalle_maquinas"] = data["registros"]
+        del data["registros"]
+
+    # 🔒 Asegurar claves correctas en máquinas
+    for m in data.get("detalle_maquinas", []):
+        if "total_in" not in m and "in" in m:
+            m["total_in"] = m.pop("in")
+        if "total_out" not in m and "out" in m:
+            m["total_out"] = m.pop("out")
+        if "total_jackpot" not in m and "jackpot" in m:
+            m["total_jackpot"] = m.pop("jackpot")
+        if "total_billetero" not in m and "billetero" in m:
+            m["total_billetero"] = m.pop("billetero")
+
+    # 🔄 Si no hay totales, generarlos automáticamente
+    if "totales" not in data or not data["totales"]:
+        totales = {
+            "total_in": sum(m.get("total_in", 0) for m in data.get("detalle_maquinas", [])),
+            "total_out": sum(m.get("total_out", 0) for m in data.get("detalle_maquinas", [])),
+            "total_jackpot": sum(m.get("total_jackpot", 0) for m in data.get("detalle_maquinas", [])),
+            "total_billetero": sum(m.get("total_billetero", 0) for m in data.get("detalle_maquinas", [])),
+            "utilidad": sum(m.get("utilidad", 0) for m in data.get("detalle_maquinas", []))
+        }
+        data["totales"] = totales
+
+    # Exportar
     if formato.lower() == "pdf":
         ruta = ExportadorReportes.exportar_a_pdf(data, nombre_archivo)
     elif formato.lower() == "excel":
@@ -113,6 +148,7 @@ def exportar_reporte(
         return {"error": "Formato no soportado. Usa 'pdf' o 'excel'."}
 
     return FileResponse(path=ruta, filename=os.path.basename(ruta), media_type="application/octet-stream")
+
 
 
 import smtplib

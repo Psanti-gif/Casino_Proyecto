@@ -1,4 +1,5 @@
 import requests
+from fastapi import HTTPException
 
 class ReportesServiceIndividual:
 
@@ -15,11 +16,16 @@ class ReportesServiceIndividual:
 
         try:
             response = requests.post("http://127.0.0.1:8000/cuadre_maquina", json=payload)
+
             if response.status_code != 200:
-                return {"error": "No se pudo obtener la utilidad de la máquina"}
+                raise HTTPException(status_code=500, detail="No se pudo obtener la utilidad de la máquina")
 
             data = response.json()
-            return data.get("cuadres", [])
+
+            if "cuadres" not in data or not isinstance(data["cuadres"], list):
+                raise HTTPException(status_code=400, detail="Respuesta de cuadre_maquina inválida")
+
+            return {"registros": data["cuadres"]}
 
         except Exception as e:
-            return {"error": f"Error al consultar cuadre_maquina: {str(e)}"}
+            raise HTTPException(status_code=500, detail=f"Error al consultar cuadre_maquina: {str(e)}")

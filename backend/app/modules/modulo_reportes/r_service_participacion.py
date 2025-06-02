@@ -1,9 +1,10 @@
 import requests
+from fastapi import HTTPException
 
 class ReportesServiceParticipacion:
 
     @staticmethod
-    def generar_reporte_participacion(maquinas: list, fecha_inicio: str, fecha_fin: str, denominaciones: dict, casino: str, porcentaje: float):
+    def generar_reporte_participacion(fecha_inicio: str, fecha_fin: str, casino: str, maquinas: list, denominacion: float, porcentaje: float):
         resultados = []
 
         for codigo in maquinas:
@@ -13,25 +14,24 @@ class ReportesServiceParticipacion:
                 "casino": casino,
                 "maquina": codigo,
                 "id": codigo,
-                "denominacion": denominaciones.get(codigo, 1.0)
+                "denominacion": denominacion
             }
 
             try:
                 resp = requests.post("http://127.0.0.1:8000/cuadre_maquina", json=payload)
                 if resp.status_code == 200:
-                    resultados.extend(resp.json().get("cuadres", []))
-            except:
-                continue
+                    cuadre = resp.json().get("cuadres", [])
+                    resultados.extend(cuadre)
+                else:
+                    raise HTTPException(status_code=500, detail=f"Error al consultar máquina {codigo}")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Excepción al procesar máquina {codigo}: {str(e)}")
 
         utilidad_total = sum(r["utilidad"] for r in resultados)
         valor_participacion = utilidad_total * (porcentaje / 100)
 
         return {
-            "casino": casino,
-            "fecha_inicio": fecha_inicio,
-            "fecha_fin": fecha_fin,
-            "porcentaje_aplicado": porcentaje,
+            "registros": resultados,
             "utilidad_total": utilidad_total,
-            "valor_participacion": valor_participacion,
-            "detalle_maquinas": resultados
+            "valor_participacion": round(valor_participacion, 2)
         }
