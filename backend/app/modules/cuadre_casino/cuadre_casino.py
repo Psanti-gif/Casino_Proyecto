@@ -208,3 +208,12 @@ def guardar_utilidad_casino(payload: dict = Body(...)):
             payload["totales"].get("utilidad_total", 0)
         ])
     return {"status": "ok", "archivo": str(ARCHIVO_UTILIDAD)}
+
+@router.get("/utilidad_final_casino")
+def obtener_utilidad_final():
+    csv_path = Path(__file__).parent / "utilidad_final_casino.csv"
+    if not csv_path.exists():
+        return []
+    with open(csv_path, newline='', encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        return list(reader)
