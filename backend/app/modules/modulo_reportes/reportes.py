@@ -19,14 +19,37 @@ def obtener_datos_reporte(
     fecha_inicio: Optional[date] = None,
     fecha_fin: Optional[date] = None,
     casino: Optional[str] = None,
-    marca: Optional[str] = None,
     modelo: Optional[str] = None,
-    ciudad: Optional[str] = None,
     maquinas: Optional[List[str]] = None,
 ):
     registros = []
     fecha_inicio_str = fecha_inicio.isoformat() if fecha_inicio else None
     fecha_fin_str = fecha_fin.isoformat() if fecha_fin else None
+
+    # Normalizar opción 'Todos' en modelo y maquinas
+    if modelo and modelo.lower() in ["todos", "todas"]:
+        modelo = None
+    if maquinas and (any(m.lower() in ["todos", "todas"] for m in maquinas)):
+        maquinas = None
+
+    # Si se filtra por modelo, obtener los códigos de las máquinas con ese modelo
+    if modelo:
+        from pathlib import Path
+        import json
+        ruta_maquinas = Path(__file__).parent.parent / "gestion_maquinas" / "maquinas.json"
+        codigos_maquinas_modelo = []
+        if ruta_maquinas.exists():
+            with open(ruta_maquinas, "r", encoding="utf-8") as f:
+                maquinas_data = json.load(f)
+                for m in maquinas_data.values():
+                    if m.get("modelo", "").lower() == modelo.lower():
+                        if not casino or m.get("casino", "").lower() == (casino or "").lower() or casino == "Todos":
+                            codigos_maquinas_modelo.append(m["codigo"])
+        # Si ya hay filtro de maquinas, hacer intersección
+        if maquinas:
+            maquinas = list(set(maquinas) & set(codigos_maquinas_modelo))
+        else:
+            maquinas = codigos_maquinas_modelo
 
     # Si casino es 'Todos' o None, obtener todos los casinos
     if (casino is None or casino == "Todos") and (not maquinas or len(maquinas) == 0):
@@ -105,14 +128,12 @@ def generar_reporte(
     fecha_inicio: Optional[date] = Query(None),
     fecha_fin: Optional[date] = Query(None),
     casino: Optional[str] = Query(None),
-    marca: Optional[str] = Query(None),
     modelo: Optional[str] = Query(None),
-    ciudad: Optional[str] = Query(None),
     maquinas: Optional[List[str]] = Query(None),
 ):
     try:
-        print(f"Parametros recibidos: fecha_inicio={fecha_inicio}, fecha_fin={fecha_fin}, casino={casino}, marca={marca}, modelo={modelo}, ciudad={ciudad}, maquinas={maquinas}")
-        registros = obtener_datos_reporte(fecha_inicio, fecha_fin, casino, marca, modelo, ciudad, maquinas)
+        print(f"Parametros recibidos: fecha_inicio={fecha_inicio}, fecha_fin={fecha_fin}, casino={casino}, modelo={modelo}, maquinas={maquinas}")
+        registros = obtener_datos_reporte(fecha_inicio, fecha_fin, casino, modelo, maquinas)
         print(f"Registros obtenidos: {registros}")
         return {"registros": registros}
     except Exception as e:
@@ -125,12 +146,10 @@ def exportar_reporte(
     fecha_inicio: Optional[date] = Query(None),
     fecha_fin: Optional[date] = Query(None),
     casino: Optional[str] = Query(None),
-    marca: Optional[str] = Query(None),
     modelo: Optional[str] = Query(None),
-    ciudad: Optional[str] = Query(None),
     maquinas: Optional[List[str]] = Query(None),
 ):
-    registros = obtener_datos_reporte(fecha_inicio, fecha_fin, casino, marca, modelo, ciudad, maquinas)
+    registros = obtener_datos_reporte(fecha_inicio, fecha_fin, casino, modelo, maquinas)
     if not registros:
         return JSONResponse(status_code=404, content={"error": "No hay datos para exportar"})
     export_dir = os.path.join(os.path.dirname(__file__), "../../../exports")
@@ -194,7 +213,7 @@ def reporte_participacion(
     casino: Optional[str] = Query(None),
     maquinas: Optional[List[str]] = Query(None),
 ):
-    registros = obtener_datos_reporte(fecha_inicio, fecha_fin, casino, None, None, None, maquinas)
+    registros = obtener_datos_reporte(fecha_inicio, fecha_fin, casino, None, maquinas)
     utilidad_total = sum(r["utilidad"] for r in registros)
     valor_participacion = utilidad_total * (porcentaje / 100)
     return {
