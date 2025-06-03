@@ -11,5 +11,6 @@ Fecha,Casino,Maquina,In,Out,Jackpot,Billetero,Recorte
 2025-05-22,Casino Medellín,M5-1,1680,1130,160,450,True
 2025-05-23,Casino Medellín,M6-1,1850,1235,180,500,False
 2025-05-24,Casino Medellín,M7-1,2000,1330,200,550,False
-
 2025-05-23,Casino Medellín,M1-2,1500.0,250.0,360.0,700.0,False
+2025-05-19,Casino Cali,C1-1,1100,700,90,250,False
+2025-05-20,Casino Bello,B1-1,1050,650,80,200,False

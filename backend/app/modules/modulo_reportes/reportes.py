@@ -1,230 +1,204 @@
-from fastapi import APIRouter, Query, Body, HTTPException
-from app.modules.modulo_reportes.r_service_lugares import ReportesServiceLugares
-from app.modules.modulo_reportes.r_service_maquinas import ReportesServiceMaquinas
-from app.modules.modulo_reportes.r_service_individual import ReportesServiceIndividual
-from app.modules.modulo_reportes.r_service_consolidado import ReportesServiceConsolidado
-from app.modules.modulo_reportes.r_service_grupo import ReportesServiceGrupo
-from app.modules.modulo_reportes.r_service_participacion import ReportesServiceParticipacion
-from app.modules.modulo_reportes.exportador_reportes import ExportadorReportes
-from typing import List
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Query
+from fastapi.responses import FileResponse, JSONResponse
+from typing import List, Optional
+from datetime import date
 import os
+import pandas as pd
+from fpdf import FPDF
 import uuid
+from app.modules.cuadre_casino.cuadre_casino import cuadre_casino, CuadreCasinoRequest
+from app.modules.cuadre_maquina.cuadre_maquina import calcular_balance, BalanceRequest
+from app.modules.gestion_lugares.lugares import cargar_lugares
 
-router = APIRouter(tags=["Modulo de Reportes"])
+router = APIRouter(prefix="/reportes", tags=["Reportes"])
 
-# ✅ Consolidado
-@router.get("/reportes/generar")
-def generar_reporte_consolidado_general(
-    fecha_inicio: str = Query(...),
-    fecha_fin: str = Query(...),
-    casino: str = Query("Todos")
+# Función para obtener datos reales de reportes
+# Si se filtra por casino y no por máquina, usa cuadre_casino; si se filtra por máquina, usa cuadre_maquina
+
+def obtener_datos_reporte(
+    fecha_inicio: Optional[date] = None,
+    fecha_fin: Optional[date] = None,
+    casino: Optional[str] = None,
+    marca: Optional[str] = None,
+    modelo: Optional[str] = None,
+    ciudad: Optional[str] = None,
+    maquinas: Optional[List[str]] = None,
 ):
-    registros_totales = []
+    registros = []
+    fecha_inicio_str = fecha_inicio.isoformat() if fecha_inicio else None
+    fecha_fin_str = fecha_fin.isoformat() if fecha_fin else None
 
-    if casino == "Todos":
-        casinos_disponibles = ReportesServiceLugares.obtener_casinos()
-
-        for c in casinos_disponibles:
-            nombre_casino = c["nombre"] if isinstance(c, dict) else c
-            registros = ReportesServiceConsolidado.generar_reporte_consolidado(
-                casino=nombre_casino,
-                fecha_inicio=fecha_inicio,
-                fecha_fin=fecha_fin
+    # Si casino es 'Todos' o None, obtener todos los casinos
+    if (casino is None or casino == "Todos") and (not maquinas or len(maquinas) == 0):
+        lugares = cargar_lugares()
+        for datos in lugares.values():
+            casino_nombre = datos["nombre_casino"]
+            req = CuadreCasinoRequest(casino=casino_nombre, fecha_inicio=fecha_inicio_str, fecha_fin=fecha_fin_str)
+            resultado = cuadre_casino(req)
+            for m in resultado["detalle_maquinas"]:
+                registros.append({
+                    "fecha_inicio": m["fecha_inicio"],
+                    "fecha_fin": m["fecha_fin"],
+                    "casino": casino_nombre,
+                    "maquina": m["maquina"],
+                    "in": m["total_in"],
+                    "out": m["total_out"],
+                    "jackpot": m["total_jackpot"],
+                    "billetero": m["total_billetero"],
+                    "utilidad": m["utilidad"],
+                    "denominacion": m["denominacion"],
+                    "contador_inicial": m["contador_inicial"],
+                    "contador_final": m["contador_final"],
+                })
+    # Reporte por casino (consolidado)
+    elif casino and (not maquinas or len(maquinas) == 0):
+        req = CuadreCasinoRequest(casino=casino, fecha_inicio=fecha_inicio_str, fecha_fin=fecha_fin_str)
+        resultado = cuadre_casino(req)
+        for m in resultado["detalle_maquinas"]:
+            registros.append({
+                "fecha_inicio": m["fecha_inicio"],
+                "fecha_fin": m["fecha_fin"],
+                "casino": casino,
+                "maquina": m["maquina"],
+                "in": m["total_in"],
+                "out": m["total_out"],
+                "jackpot": m["total_jackpot"],
+                "billetero": m["total_billetero"],
+                "utilidad": m["utilidad"],
+                "denominacion": m["denominacion"],
+                "contador_inicial": m["contador_inicial"],
+                "contador_final": m["contador_final"],
+            })
+    # Reporte por máquina(s)
+    elif maquinas:
+        for maquina in maquinas:
+            # Se requiere denominación, casino y máquina para el cuadre de máquina
+            # Aquí se asume denominación=1.0, pero se puede mejorar leyendo la real si es necesario
+            req = BalanceRequest(
+                fecha_inicio=fecha_inicio_str,
+                fecha_fin=fecha_fin_str,
+                casino=casino or "",
+                maquina=maquina,
+                id=maquina,
+                denominacion=1.0
             )
-            if isinstance(registros, list):
-                registros_totales.extend(registros)
-            else:
-                print(f"[ERROR] Reporte fallido para {c}: {registros}")
+            resultado = calcular_balance(req)
+            for r in resultado["cuadres"]:
+                registros.append({
+                    "fecha_inicio": r["fecha_inicio"],
+                    "fecha_fin": r["fecha_fin"],
+                    "casino": r["casino"],
+                    "maquina": r["maquina"],
+                    "in": r["total_in"],
+                    "out": r["total_out"],
+                    "jackpot": r["total_jackpot"],
+                    "billetero": r["total_billetero"],
+                    "utilidad": r["utilidad"],
+                    "contador_inicial": r["contador_inicial"],
+                    "contador_final": r["contador_final"],
+                })
+    # Si no hay filtro, retorna vacío
+    return registros
 
-        return {"registros": registros_totales}
-
-    resultado = ReportesServiceConsolidado.generar_reporte_consolidado(
-        casino=casino,
-        fecha_inicio=fecha_inicio,
-        fecha_fin=fecha_fin
-    )
-
-    if isinstance(resultado, dict) and "registros" in resultado:
-        return {"registros": resultado["registros"]}
-    elif isinstance(resultado, list):
-        return {"registros": resultado}
-    else:
-        raise HTTPException(status_code=500, detail="Error al generar el reporte consolidado")
-
-# ✅ Individual
-@router.get("/reportes/individual")
-def obtener_reporte_individual(
-    fecha_inicio: str = Query(...),
-    fecha_fin: str = Query(...),
-    casino: str = Query(...),
-    maquina: str = Query(...),
-    denominacion: float = Query(...)
+@router.get("/generar-reporte")
+def generar_reporte(
+    fecha_inicio: Optional[date] = Query(None),
+    fecha_fin: Optional[date] = Query(None),
+    casino: Optional[str] = Query(None),
+    marca: Optional[str] = Query(None),
+    modelo: Optional[str] = Query(None),
+    ciudad: Optional[str] = Query(None),
+    maquinas: Optional[List[str]] = Query(None),
 ):
-    return ReportesServiceIndividual.generar_reporte_individual(
-        fecha_inicio=fecha_inicio,
-        fecha_fin=fecha_fin,
-        casino=casino,
-        maquina=maquina,
-        denominacion=denominacion
-    )
+    try:
+        print(f"Parametros recibidos: fecha_inicio={fecha_inicio}, fecha_fin={fecha_fin}, casino={casino}, marca={marca}, modelo={modelo}, ciudad={ciudad}, maquinas={maquinas}")
+        registros = obtener_datos_reporte(fecha_inicio, fecha_fin, casino, marca, modelo, ciudad, maquinas)
+        print(f"Registros obtenidos: {registros}")
+        return {"registros": registros}
+    except Exception as e:
+        print(f"Error en generar_reporte: {e}")  # Log del error
+        return JSONResponse(status_code=500, content={"error": f"Error interno del servidor: {str(e)}"})
 
-# ✅ Grupo
-@router.post("/reportes/grupo")
-def obtener_reporte_grupo(
-    fecha_inicio: str = Body(...),
-    fecha_fin: str = Body(...),
-    casino: str = Body(...),
-    maquinas: List[str] = Body(...),
-    denominacion: float = Body(...)
-):
-    return ReportesServiceGrupo.generar_reporte_grupo(
-        fecha_inicio=fecha_inicio,
-        fecha_fin=fecha_fin,
-        casino=casino,
-        maquinas=maquinas,
-        denominacion=denominacion
-    )
-
-# ✅ Participación
-@router.post("/reportes/participacion")
-def obtener_reporte_participacion(
-    fecha_inicio: str = Body(...),
-    fecha_fin: str = Body(...),
-    casino: str = Body(...),
-    maquinas: List[str] = Body(...),
-    denominacion: float = Body(...),
-    porcentaje: float = Body(...)
-):
-    return ReportesServiceParticipacion.generar_reporte_participacion(
-        fecha_inicio=fecha_inicio,
-        fecha_fin=fecha_fin,
-        casino=casino,
-        maquinas=maquinas,
-        denominacion=denominacion,
-        porcentaje=porcentaje
-    )
-    
-@router.post("/reportes/exportar")
+@router.get("/exportar-reporte")
 def exportar_reporte(
-    data: dict = Body(...),
-    formato: str = Query(..., description="pdf o excel")
+    formato: str = Query("pdf"),
+    fecha_inicio: Optional[date] = Query(None),
+    fecha_fin: Optional[date] = Query(None),
+    casino: Optional[str] = Query(None),
+    marca: Optional[str] = Query(None),
+    modelo: Optional[str] = Query(None),
+    ciudad: Optional[str] = Query(None),
+    maquinas: Optional[List[str]] = Query(None),
 ):
-    nombre_archivo = f"reporte_{uuid.uuid4().hex[:8]}"
-
-    # 🔧 Asegurar compatibilidad con el exportador
-    if "registros" in data:
-        data["detalle_maquinas"] = data["registros"]
-        del data["registros"]
-
-    # 🔒 Asegurar claves correctas en máquinas
-    for m in data.get("detalle_maquinas", []):
-        if "total_in" not in m and "in" in m:
-            m["total_in"] = m.pop("in")
-        if "total_out" not in m and "out" in m:
-            m["total_out"] = m.pop("out")
-        if "total_jackpot" not in m and "jackpot" in m:
-            m["total_jackpot"] = m.pop("jackpot")
-        if "total_billetero" not in m and "billetero" in m:
-            m["total_billetero"] = m.pop("billetero")
-
-    # 🔄 Si no hay totales, generarlos automáticamente
-    if "totales" not in data or not data["totales"]:
-        totales = {
-            "total_in": sum(m.get("total_in", 0) for m in data.get("detalle_maquinas", [])),
-            "total_out": sum(m.get("total_out", 0) for m in data.get("detalle_maquinas", [])),
-            "total_jackpot": sum(m.get("total_jackpot", 0) for m in data.get("detalle_maquinas", [])),
-            "total_billetero": sum(m.get("total_billetero", 0) for m in data.get("detalle_maquinas", [])),
-            "utilidad": sum(m.get("utilidad", 0) for m in data.get("detalle_maquinas", []))
-        }
-        data["totales"] = totales
-
-    # Exportar
-    if formato.lower() == "pdf":
-        ruta = ExportadorReportes.exportar_a_pdf(data, nombre_archivo)
-    elif formato.lower() == "excel":
-        ruta = ExportadorReportes.exportar_a_excel(data, nombre_archivo)
+    registros = obtener_datos_reporte(fecha_inicio, fecha_fin, casino, marca, modelo, ciudad, maquinas)
+    if not registros:
+        return JSONResponse(status_code=404, content={"error": "No hay datos para exportar"})
+    export_dir = os.path.join(os.path.dirname(__file__), "../../../exports")
+    os.makedirs(export_dir, exist_ok=True)
+    unique_id = uuid.uuid4().hex[:8]
+    # Remove 'contador_inicial' and 'contador_final' from the DataFrame for Excel
+    if formato == "excel" or formato == "xlsx":
+        df = pd.DataFrame(registros).drop(columns=["contador_inicial", "contador_final"], errors="ignore")
+        nombre_archivo = f"reporte_{unique_id}.xlsx"
+        ruta_archivo = os.path.join(export_dir, nombre_archivo)
+        with pd.ExcelWriter(ruta_archivo, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="Reporte")
+            worksheet = writer.sheets["Reporte"]
+            for column_cells in worksheet.columns:
+                max_length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
+                column_letter = column_cells[0].column_letter
+                worksheet.column_dimensions[column_letter].width = max_length + 2
+    elif formato == "pdf":
+        nombre_archivo = f"reporte_{unique_id}.pdf"
+        ruta_archivo = os.path.join(export_dir, nombre_archivo)
+        pdf = FPDF(orientation="L", unit="mm", format="A4")
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, "Reporte de Contadores", ln=True, align="C")
+        pdf.set_font("Arial", size=9)
+        headers = ["fecha_inicio", "fecha_fin", "casino", "maquina", "in", "out", "jackpot", "billetero", "utilidad"]
+        # Calculate max width for each column (header or value)
+        col_widths = []
+        for h in headers:
+            max_content = max([len(str(r.get(h, ""))) for r in registros] + [len(h)])
+            # Use string width in mm for best fit
+            max_val = max([pdf.get_string_width(str(r.get(h, ""))) for r in registros] + [pdf.get_string_width(h)])
+            col_widths.append(max(max_val + 4, 20))  # min width 20mm, add padding
+        # Draw headers
+        for i, h in enumerate(headers):
+            pdf.cell(col_widths[i], 8, h.upper(), border=1, align="C")
+        pdf.ln()
+        # Draw rows
+        for r in registros:
+            for i, h in enumerate(headers):
+                val = str(r.get(h, ""))
+                # If value is too wide, use MultiCell
+                if pdf.get_string_width(val) > col_widths[i] - 2:
+                    x = pdf.get_x()
+                    y = pdf.get_y()
+                    pdf.multi_cell(col_widths[i], 8, val, border=1, align="C")
+                    pdf.set_xy(x + col_widths[i], y)
+                else:
+                    pdf.cell(col_widths[i], 8, val, border=1, align="C")
+            pdf.ln()
+        pdf.output(ruta_archivo)
     else:
-        return {"error": "Formato no soportado. Usa 'pdf' o 'excel'."}
+        return JSONResponse(status_code=400, content={"error": "Formato no soportado"})
+    return FileResponse(ruta_archivo, filename=nombre_archivo)
 
-    return FileResponse(path=ruta, filename=os.path.basename(ruta), media_type="application/octet-stream")
-
-
-
-import smtplib
-from email.message import EmailMessage
-
-def enviar_email_con_adjunto(destinatario, archivo_adjunto, formato):
-    remitente = "samuxbass200424@gmail.com"
-    password = "uogv ekis tyie kwjg"
-    nombre_remitente = "Sistema Casino"
-
-    asunto = f"Reporte del Sistema Casino ({formato.upper()})"
-    cuerpo = "Hola,\n\nAdjunto encontrarás el reporte solicitado desde el sistema Casino.\n\nSaludos."
-
-    mensaje = EmailMessage()
-    mensaje["From"] = f"{nombre_remitente} <{remitente}>"
-    mensaje["To"] = destinatario
-    mensaje["Subject"] = asunto
-    mensaje.set_content(cuerpo)
-
-    with open(archivo_adjunto, "rb") as f:
-        contenido = f.read()
-        nombre = os.path.basename(archivo_adjunto)
-        tipo_mime = "application/pdf" if formato == "pdf" else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        mensaje.add_attachment(contenido, maintype="application", subtype=tipo_mime.split("/")[-1], filename=nombre)
-
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-        smtp.login(remitente, password)
-        smtp.send_message(mensaje)
-
-from app.modules.modulo_reportes.exportador_reportes import ExportadorReportes
-@router.post("/reportes/enviar-email")
-def enviar_reporte_por_email(
-    data: dict = Body(...),
-    formato: str = Query(..., description="pdf o excel"),
-    destinatario: str = Query(...)
+@router.get("/reporte-participacion")
+def reporte_participacion(
+    porcentaje: float = Query(..., gt=0, lt=100),
+    fecha_inicio: Optional[date] = Query(None),
+    fecha_fin: Optional[date] = Query(None),
+    casino: Optional[str] = Query(None),
+    maquinas: Optional[List[str]] = Query(None),
 ):
-    nombre_archivo = f"reporte_{uuid.uuid4().hex[:8]}"
-    ruta = ExportadorReportes.exportar_a_pdf(data, nombre_archivo) if formato == "pdf" else ExportadorReportes.exportar_a_excel(data, nombre_archivo)
-
-    try:
-        enviar_email_con_adjunto(destinatario, ruta, formato)
-        return {"mensaje": f"Reporte enviado exitosamente a {destinatario}"}
-    except Exception as e:
-        return {"error": str(e)}
-
-
-from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime
-
-# Usa el mismo scheduler global que en main.py
-scheduler = BackgroundScheduler()
-scheduler.start()
-
-def tarea_programada_enviar_reporte(destinatario, formato, data):
-    nombre_archivo = f"reporte_{uuid.uuid4().hex[:8]}"
-    ruta = ExportadorReportes.exportar_a_pdf(data, nombre_archivo) if formato == "pdf" else ExportadorReportes.exportar_a_excel(data, nombre_archivo)
-    enviar_email_con_adjunto(destinatario, ruta, formato)
-
-@router.post("/reportes/programar-envio")
-def programar_envio_reporte(
-    data: dict = Body(...),
-    formato: str = Query(...),
-    destinatario: str = Query(...),
-    fecha: str = Query(..., description="Formato: YYYY-MM-DD HH:MM")
-):
-    try:
-        fecha_programada = datetime.strptime(fecha, "%Y-%m-%d %H:%M")
-
-        scheduler.add_job(
-            tarea_programada_enviar_reporte,
-            trigger='date',
-            run_date=fecha_programada,
-            args=[destinatario, formato, data]
-        )
-
-        return {"mensaje": f"Envío programado para {fecha_programada} a {destinatario}"}
-
-    except Exception as e:
-        return {"error": str(e)}
+    registros = obtener_datos_reporte(fecha_inicio, fecha_fin, casino, None, None, None, maquinas)
+    utilidad_total = sum(r["utilidad"] for r in registros)
+    valor_participacion = utilidad_total * (porcentaje / 100)
+    return {
+        "utilidad_total": utilidad_total,
+        "valor_participacion": valor_participacion,
+        "registros": registros,
+    }
