@@ -5,3 +5,5 @@ pandas
 fpdf
 apscheduler
 requests
+openpyxl
+python-multipart
