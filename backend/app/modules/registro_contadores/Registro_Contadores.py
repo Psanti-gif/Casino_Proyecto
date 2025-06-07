@@ -44,6 +44,28 @@ def registrar_contador(contador: Contador):
         if valor < 0:
             return {"error": "Los contadores no pueden tener valores negativos"}
 
+    # Buscar registro anterior para la misma máquina y casino
+    registro_anterior = None
+    with open(ARCHIVO_CSV, mode='r', newline='', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        registros_misma_maquina = [row for row in reader if row["Casino"] == contador.casino and row["Maquina"] == contador.maquina and row["Fecha"] < contador.fecha]
+        if registros_misma_maquina:
+            # Tomar el registro con la fecha más reciente menor a la actual
+            registro_anterior = max(registros_misma_maquina, key=lambda x: x["Fecha"])
+
+    recorte_detectado = False
+    if registro_anterior:
+        if (
+            float(contador.in_contador) <= float(registro_anterior["In"]) or
+            float(contador.out_contador) <= float(registro_anterior["Out"]) or
+            float(contador.jackpot_contador) <= float(registro_anterior["Jackpot"]) or
+            float(contador.billetero_contador) <= float(registro_anterior["Billetero"])
+        ):
+            recorte_detectado = True
+
+    # Si se detecta recorte, forzar el campo recorte a True
+    contador.recorte = recorte_detectado or contador.recorte
+
     with open(ARCHIVO_CSV, mode='a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow([
