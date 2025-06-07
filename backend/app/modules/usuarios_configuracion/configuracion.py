@@ -9,11 +9,19 @@ router = APIRouter(tags=["Configuracion"])
 
 CARPETA = Path(__file__).parent
 ARCHIVO_CONFIG = CARPETA / "configuracion.json"
+ARCHIVO_MARCAS_MODELOS = CARPETA / "marcas_modelos.json"
+
 MEDIA = CARPETA / "media"
 MEDIA.mkdir(exist_ok=True)
 
 # Montar carpeta de imágenes
 router.mount("/media", StaticFiles(directory=MEDIA), name="media")
+
+# Función auxiliar para procesar texto separado por comas
+
+
+def procesar_lista(texto):
+    return [x.strip() for x in texto.split(",") if x.strip()]
 
 # Obtener configuración actual
 
@@ -25,7 +33,7 @@ def obtener_configuracion():
             config = json.load(f)
             config.setdefault("modo_mantenimiento", False)
             config.setdefault("correo", "")
-            config.setdefault("divisa", "")  # <-- Añadir por compatibilidad
+            config.setdefault("divisa", "")
             return config
     return {
         "nombre_empresa": "CUADRE CASINO",
@@ -33,7 +41,7 @@ def obtener_configuracion():
         "direccion": "",
         "nit": "",
         "correo": "",
-        "divisa": "",  # <-- Añadir aquí
+        "divisa": "",
         "color_primario": "#1d4ed8",
         "color_fondo": "#ffffff",
         "logo_url": "",
@@ -50,7 +58,9 @@ def guardar_configuracion(
     direccion: str = Form(""),
     nit: str = Form(""),
     correo: str = Form(""),
-    divisa: str = Form(""),  # <-- Añadir aquí
+    divisa: str = Form(""),
+    marcas: str = Form(""),
+    modelos: str = Form(""),
     color_primario: str = Form("#1d4ed8"),
     color_fondo: str = Form("#ffffff"),
     modo_mantenimiento: bool = Form(False),
@@ -62,7 +72,7 @@ def guardar_configuracion(
         "direccion": direccion,
         "nit": nit,
         "correo": correo,
-        "divisa": divisa,  # <-- Añadir aquí
+        "divisa": divisa,
         "color_primario": color_primario,
         "color_fondo": color_fondo,
         "modo_mantenimiento": modo_mantenimiento,
@@ -80,8 +90,28 @@ def guardar_configuracion(
             if "logo_url" in previo:
                 datos["logo_url"] = previo["logo_url"]
 
+    # Guardar configuracion.json
     with ARCHIVO_CONFIG.open("w", encoding="utf-8") as f:
         json.dump(datos, f, indent=2, ensure_ascii=False)
+
+    # Procesar y agregar marcas y modelos al archivo existente
+    marcas_lista = procesar_lista(marcas)
+    modelos_lista = procesar_lista(modelos)
+
+    if ARCHIVO_MARCAS_MODELOS.exists():
+        with ARCHIVO_MARCAS_MODELOS.open("r", encoding="utf-8") as f:
+            marcas_modelos = json.load(f)
+    else:
+        marcas_modelos = {}
+
+    for marca in marcas_lista:
+        modelos_actuales = set(marcas_modelos.get(marca, []))
+        nuevos_modelos = set(modelos_lista)
+        marcas_modelos[marca] = sorted(
+            list(modelos_actuales.union(nuevos_modelos)))
+
+    with ARCHIVO_MARCAS_MODELOS.open("w", encoding="utf-8") as f:
+        json.dump(marcas_modelos, f, indent=2, ensure_ascii=False)
 
     return {"mensaje": "Configuración guardada correctamente"}
 
@@ -126,5 +156,12 @@ def modo_mantenimiento_off(clave: str):
             return {"mensaje": "Modo mantenimiento desactivado"}
     return {"mensaje": "Clave incorrecta"}
 
+# Endpoint para acceder a marcas_modelos.json
 
-# hacer peticion a "http://localhost:8000/modo-mantenimiento-off?clave=admin123" para desactivar el mantenimiento
+
+@router.get("/marcas_modelos.json")
+def obtener_marcas_modelos():
+    if ARCHIVO_MARCAS_MODELOS.exists():
+        with ARCHIVO_MARCAS_MODELOS.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}

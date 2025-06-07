@@ -33,8 +33,8 @@
   },
   "8": {
     "nombre_usuario": "prueba",
-    "nombre_completo": "prueba",
-    "correo": "prueba@prueba",
+    "nombre_completo": "Pedro Martinez",
+    "correo": "pedro@casino.com",
     "rol": "Admin",
     "estado": "Inactivo",
     "contrasena": "prueba"
