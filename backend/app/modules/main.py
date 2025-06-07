@@ -37,11 +37,13 @@ app.mount("/media", StaticFiles(directory=RUTA_MEDIA), name="media")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Permite solicitudes desde el frontend
+    # Permite solicitudes desde el frontend
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],  # Permite todos los métodos (GET, POST, etc.)
     allow_headers=["*"],  # Permite todos los headers
 )
+
 
 @app.get("/")
 def inicio():
