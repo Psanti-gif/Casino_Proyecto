@@ -48,4 +48,4 @@ def inicio():
     return {"mensaje": "Api Proyecto Casino"}
 
 
-# uvicorn app.modules.main:app --reload
+# python -m uvicorn app.modules.main:app --reload
