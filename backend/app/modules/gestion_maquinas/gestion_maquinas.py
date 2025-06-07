@@ -62,6 +62,12 @@ def listar_maquinas():
 def crear_maquina(maquina: Maquina):
     maquinas = cargar_maquinas()
 
+    # Verificar si ya existe una máquina con el mismo código
+    for datos in maquinas.values():
+        if datos["codigo"].strip().lower() == maquina.codigo.strip().lower():
+            raise HTTPException(
+                status_code=400, detail="Ya existe una máquina con ese código")
+
     nuevo_id = obtener_siguiente_id()
     maquinas[str(nuevo_id)] = maquina.dict()
 
@@ -108,3 +114,14 @@ def inactivar_maquina(id: int):
     maquinas[id_str]["activo"] = 0
     guardar_maquinas(maquinas)
     return {"mensaje": "Máquina inactivada correctamente"}
+
+# obtener datos de una maquina por ID
+
+
+@router.get("/maquina/{id}")
+def obtener_maquina_por_id(id: int):
+    maquinas = cargar_maquinas()
+    id_str = str(id)
+    if id_str not in maquinas:
+        raise HTTPException(status_code=404, detail="Máquina no encontrada")
+    return maquinas[id_str]
