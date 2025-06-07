@@ -25,6 +25,7 @@ def obtener_configuracion():
             config = json.load(f)
             config.setdefault("modo_mantenimiento", False)
             config.setdefault("correo", "")
+            config.setdefault("divisa", "")  # <-- Añadir por compatibilidad
             return config
     return {
         "nombre_empresa": "CUADRE CASINO",
@@ -32,6 +33,7 @@ def obtener_configuracion():
         "direccion": "",
         "nit": "",
         "correo": "",
+        "divisa": "",  # <-- Añadir aquí
         "color_primario": "#1d4ed8",
         "color_fondo": "#ffffff",
         "logo_url": "",
@@ -48,6 +50,7 @@ def guardar_configuracion(
     direccion: str = Form(""),
     nit: str = Form(""),
     correo: str = Form(""),
+    divisa: str = Form(""),  # <-- Añadir aquí
     color_primario: str = Form("#1d4ed8"),
     color_fondo: str = Form("#ffffff"),
     modo_mantenimiento: bool = Form(False),
@@ -59,6 +62,7 @@ def guardar_configuracion(
         "direccion": direccion,
         "nit": nit,
         "correo": correo,
+        "divisa": divisa,  # <-- Añadir aquí
         "color_primario": color_primario,
         "color_fondo": color_fondo,
         "modo_mantenimiento": modo_mantenimiento,
