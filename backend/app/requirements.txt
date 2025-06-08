@@ -7,3 +7,4 @@ apscheduler
 requests
 openpyxl
 python-multipart
+pillow
