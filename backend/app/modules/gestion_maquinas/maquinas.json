@@ -1,38 +1,22 @@
 {
-  "1": {
-    "codigo": "M1-1",
-    "activo": 1,
-    "marca": "IGT",
-    "modelo": "S2000",
-    "numero_serie": "IGT-APP-002",
-    "denominacion": 0.01,
-    "casino": "Casino Medellín"
-  },
-  "10": {
-    "codigo": "M1-2",
-    "activo": 1,
-    "marca": "Aristocrat Leisure",
-    "modelo": "Reel Sovereign X",
-    "numero_serie": "USD-FNX-7000-001A",
-    "denominacion": 10.0,
-    "casino": "Casino Medellín"
-  },
-  "11": {
-    "codigo": "M1-3",
-    "activo": 1,
-    "marca": "Aristocrat Leisure",
-    "modelo": "Reel Sovereign X",
-    "numero_serie": "GOM-MWM-7703-011K",
-    "denominacion": 20.0,
-    "casino": "Casino Medellín"
-  },
-  "12": {
-    "codigo": "C1-1",
+  "13": {
+    "codigo": "M1-4",
     "activo": 1,
     "marca": "IGT",
     "modelo": "Fortune Nexus 7000",
-    "numero_serie": "FG-23435436",
-    "denominacion": 20.0,
-    "casino": "Casino Cali"
+    "numero_serie": "GFD-54354654",
+    "denominacion": 5.0,
+    "casino": "Casino Medellín",
+    "porcentaje_participacion": 20.0
+  },
+  "14": {
+    "codigo": "M1-5",
+    "activo": 1,
+    "marca": "NOVOMATIC",
+    "modelo": "Royal Spin Deluxe",
+    "numero_serie": "NHJ-473625436",
+    "denominacion": 10.0,
+    "casino": "Casino Medellín",
+    "porcentaje_participacion": 10.0
   }
 }

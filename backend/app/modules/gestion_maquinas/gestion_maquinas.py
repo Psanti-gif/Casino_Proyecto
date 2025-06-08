@@ -8,7 +8,7 @@ router = APIRouter(tags=["Gestion de Maquinas"])
 ARCHIVO_MAQUINAS = Path(__file__).parent / "maquinas.json"
 ARCHIVO_CONTADOR = Path(__file__).parent / "contador_id_maquina.txt"
 
-# Modelos
+# Modelo con porcentaje de participación incluido
 
 
 class Maquina(BaseModel):
@@ -18,7 +18,8 @@ class Maquina(BaseModel):
     modelo: str
     numero_serie: str
     denominacion: float
-    casino: str  # nombre del casino asociado
+    casino: str
+    porcentaje_participacion: float
 
 # Utilidades
 
@@ -47,7 +48,6 @@ def guardar_maquinas(maquinas):
 # Rutas
 
 
-# listar maquinas
 @router.get("/maquinas")
 def listar_maquinas():
     datos = cargar_maquinas()
@@ -57,12 +57,10 @@ def listar_maquinas():
     ]
 
 
-# crear maquina
 @router.post("/maquinas")
 def crear_maquina(maquina: Maquina):
     maquinas = cargar_maquinas()
 
-    # Verificar si ya existe una máquina con el mismo código
     for datos in maquinas.values():
         if datos["codigo"].strip().lower() == maquina.codigo.strip().lower():
             raise HTTPException(
@@ -70,12 +68,10 @@ def crear_maquina(maquina: Maquina):
 
     nuevo_id = obtener_siguiente_id()
     maquinas[str(nuevo_id)] = maquina.dict()
-
     guardar_maquinas(maquinas)
     return {"mensaje": "Máquina registrada", "id": nuevo_id}
 
 
-# editar
 @router.put("/maquinas/{id}")
 def editar_maquina(id: int, datos: Maquina):
     maquinas = cargar_maquinas()
@@ -86,8 +82,6 @@ def editar_maquina(id: int, datos: Maquina):
     maquinas[id_str] = datos.dict()
     guardar_maquinas(maquinas)
     return {"mensaje": "Máquina actualizada"}
-
-# habilitar
 
 
 @router.put("/maquinas/{id}/activar")
@@ -101,8 +95,6 @@ def activar_maquina(id: int):
     guardar_maquinas(maquinas)
     return {"mensaje": "Máquina activada correctamente"}
 
-# deshabilitar
-
 
 @router.put("/maquinas/{id}/inactivar")
 def inactivar_maquina(id: int):
@@ -114,8 +106,6 @@ def inactivar_maquina(id: int):
     maquinas[id_str]["activo"] = 0
     guardar_maquinas(maquinas)
     return {"mensaje": "Máquina inactivada correctamente"}
-
-# obtener datos de una maquina por ID
 
 
 @router.get("/maquina/{id}")

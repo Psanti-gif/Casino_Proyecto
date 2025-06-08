@@ -29,27 +29,29 @@ def obtener_datos_reporte(
         modelo = None
     if marca and marca.lower() in ["todos", "todas"]:
         marca = None
-    if maquinas and (any(m.lower() in ["todos", "todas"] for m in maquinas)):
+    if maquinas and any(m.lower() in ["todos", "todas"] for m in maquinas):
         maquinas = None
 
+    from pathlib import Path
+    import json
+    ruta_maquinas = Path(__file__).parent.parent / \
+        "gestion_maquinas" / "maquinas.json"
+    maquinas_data = {}
+    if ruta_maquinas.exists():
+        with open(ruta_maquinas, "r", encoding="utf-8") as f:
+            maquinas_data = json.load(f)
+
     if modelo or marca:
-        from pathlib import Path
-        import json
-        ruta_maquinas = Path(__file__).parent.parent / \
-            "gestion_maquinas" / "maquinas.json"
         codigos_filtrados = []
-        if ruta_maquinas.exists():
-            with open(ruta_maquinas, "r", encoding="utf-8") as f:
-                maquinas_data = json.load(f)
-                for m in maquinas_data.values():
-                    cumple_modelo = not modelo or m.get(
-                        "modelo", "").lower() == modelo.lower()
-                    cumple_marca = not marca or m.get(
-                        "marca", "").lower() == marca.lower()
-                    cumple_casino = not casino or m.get("casino", "").lower() == (
-                        casino or "").lower() or casino == "Todos"
-                    if cumple_modelo and cumple_marca and cumple_casino:
-                        codigos_filtrados.append(m["codigo"])
+        for m in maquinas_data.values():
+            cumple_modelo = not modelo or m.get(
+                "modelo", "").lower() == modelo.lower()
+            cumple_marca = not marca or m.get(
+                "marca", "").lower() == marca.lower()
+            cumple_casino = not casino or m.get("casino", "").lower() == (
+                casino or "").lower() or casino == "Todos"
+            if cumple_modelo and cumple_marca and cumple_casino:
+                codigos_filtrados.append(m["codigo"])
         if maquinas:
             maquinas = list(set(maquinas) & set(codigos_filtrados))
         else:
@@ -61,19 +63,42 @@ def obtener_datos_reporte(
             casino_nombre = datos["nombre_casino"]
             try:
                 req = CuadreCasinoRequest(
-                    casino=casino_nombre, fecha_inicio=fecha_inicio_str, fecha_fin=fecha_fin_str)
+                    casino=casino_nombre, fecha_inicio=fecha_inicio_str, fecha_fin=fecha_fin_str
+                )
                 resultado = cuadre_casino(req)
                 for m in resultado["detalle_maquinas"]:
+                    codigo_maquina = m["maquina"]
+                    porcentaje = 0.0
+                    for datos in maquinas_data.values():
+                        if datos.get("codigo", "").strip().lower() == codigo_maquina.strip().lower():
+                            porcentaje = float(
+                                datos.get("porcentaje_participacion", 0))
+                            break
+
+                    total_in = m["total_in"]
+                    total_out = m["total_out"]
+                    total_jackpot = m["total_jackpot"]
+                    total_billetero = m["total_billetero"]
+                    utilidad = total_in + total_billetero - \
+                        (total_out + total_jackpot)
+                    utilidad_participante = round(
+                        utilidad * (porcentaje / 100), 2)
+                    utilidad_operador = round(
+                        utilidad - utilidad_participante, 2)
+
                     registros.append({
                         "fecha_inicio": m["fecha_inicio"],
                         "fecha_fin": m["fecha_fin"],
                         "casino": casino_nombre,
-                        "maquina": m["maquina"],
-                        "in": m["total_in"],
-                        "out": m["total_out"],
-                        "jackpot": m["total_jackpot"],
-                        "billetero": m["total_billetero"],
-                        "utilidad": m["utilidad"],
+                        "maquina": codigo_maquina,
+                        "in": total_in,
+                        "out": total_out,
+                        "jackpot": total_jackpot,
+                        "billetero": total_billetero,
+                        "utilidad": utilidad,
+                        "porcentaje_participacion": porcentaje,
+                        "utilidad_participante": utilidad_participante,
+                        "utilidad_operador": utilidad_operador,
                         "denominacion": m["denominacion"],
                         "contador_inicial": m["contador_inicial"],
                         "contador_final": m["contador_final"],
@@ -82,25 +107,47 @@ def obtener_datos_reporte(
                 print(
                     f"Error al obtener cuadre del casino '{casino_nombre}': {e}")
                 continue
+
     elif casino and (not maquinas or len(maquinas) == 0):
         req = CuadreCasinoRequest(
-            casino=casino, fecha_inicio=fecha_inicio_str, fecha_fin=fecha_fin_str)
+            casino=casino, fecha_inicio=fecha_inicio_str, fecha_fin=fecha_fin_str
+        )
         resultado = cuadre_casino(req)
         for m in resultado["detalle_maquinas"]:
+            codigo_maquina = m["maquina"]
+            porcentaje = 0.0
+            for datos in maquinas_data.values():
+                if datos.get("codigo", "").strip().lower() == codigo_maquina.strip().lower():
+                    porcentaje = float(
+                        datos.get("porcentaje_participacion", 0))
+                    break
+
+            total_in = m["total_in"]
+            total_out = m["total_out"]
+            total_jackpot = m["total_jackpot"]
+            total_billetero = m["total_billetero"]
+            utilidad = total_in + total_billetero - (total_out + total_jackpot)
+            utilidad_participante = round(utilidad * (porcentaje / 100), 2)
+            utilidad_operador = round(utilidad - utilidad_participante, 2)
+
             registros.append({
                 "fecha_inicio": m["fecha_inicio"],
                 "fecha_fin": m["fecha_fin"],
                 "casino": casino,
-                "maquina": m["maquina"],
-                "in": m["total_in"],
-                "out": m["total_out"],
-                "jackpot": m["total_jackpot"],
-                "billetero": m["total_billetero"],
-                "utilidad": m["utilidad"],
+                "maquina": codigo_maquina,
+                "in": total_in,
+                "out": total_out,
+                "jackpot": total_jackpot,
+                "billetero": total_billetero,
+                "utilidad": utilidad,
+                "porcentaje_participacion": porcentaje,
+                "utilidad_participante": utilidad_participante,
+                "utilidad_operador": utilidad_operador,
                 "denominacion": m["denominacion"],
                 "contador_inicial": m["contador_inicial"],
                 "contador_final": m["contador_final"],
             })
+
     elif maquinas:
         for maquina in maquinas:
             req = BalanceRequest(
@@ -113,6 +160,16 @@ def obtener_datos_reporte(
             )
             resultado = calcular_balance(req)
             for r in resultado["cuadres"]:
+                porcentaje = 0.0
+                for datos in maquinas_data.values():
+                    if datos.get("codigo", "").strip().lower() == maquina.strip().lower():
+                        porcentaje = float(
+                            datos.get("porcentaje_participacion", 0))
+                        break
+                utilidad = r["utilidad"]
+                utilidad_participante = round(utilidad * (porcentaje / 100), 2)
+                utilidad_operador = round(utilidad - utilidad_participante, 2)
+
                 registros.append({
                     "fecha_inicio": r["fecha_inicio"],
                     "fecha_fin": r["fecha_fin"],
@@ -122,7 +179,10 @@ def obtener_datos_reporte(
                     "out": r["total_out"],
                     "jackpot": r["total_jackpot"],
                     "billetero": r["total_billetero"],
-                    "utilidad": r["utilidad"],
+                    "utilidad": utilidad,
+                    "porcentaje_participacion": porcentaje,
+                    "utilidad_participante": utilidad_participante,
+                    "utilidad_operador": utilidad_operador,
                     "contador_inicial": r["contador_inicial"],
                     "contador_final": r["contador_final"],
                 })
@@ -139,97 +199,10 @@ def generar_reporte(
     maquinas: Optional[List[str]] = Query(None),
 ):
     try:
-        print(
-            f"Parametros recibidos: fecha_inicio={fecha_inicio}, fecha_fin={fecha_fin}, casino={casino}, marca={marca}, modelo={modelo}, maquinas={maquinas}")
         registros = obtener_datos_reporte(
             fecha_inicio, fecha_fin, casino, marca, modelo, maquinas)
-        print(f"Registros obtenidos: {registros}")
+        if not registros:
+            return JSONResponse(status_code=404, content={"error": "No se encontraron registros"})
         return {"registros": registros}
     except Exception as e:
-        print(f"Error en generar_reporte: {e}")
         return JSONResponse(status_code=500, content={"error": f"Error interno del servidor: {str(e)}"})
-
-
-@router.get("/exportar-reporte")
-def exportar_reporte(
-    formato: str = Query("pdf"),
-    fecha_inicio: Optional[date] = Query(None),
-    fecha_fin: Optional[date] = Query(None),
-    casino: Optional[str] = Query(None),
-    marca: Optional[str] = Query(None),
-    modelo: Optional[str] = Query(None),
-    maquinas: Optional[List[str]] = Query(None),
-):
-    registros = obtener_datos_reporte(
-        fecha_inicio, fecha_fin, casino, marca, modelo, maquinas)
-    if not registros:
-        return JSONResponse(status_code=404, content={"error": "No hay datos para exportar"})
-    export_dir = os.path.join(os.path.dirname(__file__), "../../../exports")
-    os.makedirs(export_dir, exist_ok=True)
-    unique_id = uuid.uuid4().hex[:8]
-
-    if formato == "excel" or formato == "xlsx":
-        df = pd.DataFrame(registros).drop(
-            columns=["contador_inicial", "contador_final"], errors="ignore")
-        nombre_archivo = f"reporte_{unique_id}.xlsx"
-        ruta_archivo = os.path.join(export_dir, nombre_archivo)
-        with pd.ExcelWriter(ruta_archivo, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="Reporte")
-            worksheet = writer.sheets["Reporte"]
-            for column_cells in worksheet.columns:
-                max_length = max(len(str(cell.value))
-                                 for cell in column_cells if cell.value is not None)
-                column_letter = column_cells[0].column_letter
-                worksheet.column_dimensions[column_letter].width = max_length + 2
-    elif formato == "pdf":
-        nombre_archivo = f"reporte_{unique_id}.pdf"
-        ruta_archivo = os.path.join(export_dir, nombre_archivo)
-        pdf = FPDF(orientation="L", unit="mm", format="A4")
-        pdf.add_page()
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, "Reporte de Contadores", ln=True, align="C")
-        pdf.set_font("Arial", size=9)
-        headers = ["fecha_inicio", "fecha_fin", "casino", "maquina",
-                   "in", "out", "jackpot", "billetero", "utilidad"]
-        col_widths = []
-        for h in headers:
-            max_val = max([pdf.get_string_width(str(r.get(h, "")))
-                          for r in registros] + [pdf.get_string_width(h)])
-            col_widths.append(max(max_val + 4, 20))
-        for i, h in enumerate(headers):
-            pdf.cell(col_widths[i], 8, h.upper(), border=1, align="C")
-        pdf.ln()
-        for r in registros:
-            for i, h in enumerate(headers):
-                val = str(r.get(h, ""))
-                if pdf.get_string_width(val) > col_widths[i] - 2:
-                    x = pdf.get_x()
-                    y = pdf.get_y()
-                    pdf.multi_cell(col_widths[i], 8, val, border=1, align="C")
-                    pdf.set_xy(x + col_widths[i], y)
-                else:
-                    pdf.cell(col_widths[i], 8, val, border=1, align="C")
-            pdf.ln()
-        pdf.output(ruta_archivo)
-    else:
-        return JSONResponse(status_code=400, content={"error": "Formato no soportado"})
-    return FileResponse(ruta_archivo, filename=nombre_archivo)
-
-
-@router.get("/reporte-participacion")
-def reporte_participacion(
-    porcentaje: float = Query(..., gt=0, lt=100),
-    fecha_inicio: Optional[date] = Query(None),
-    fecha_fin: Optional[date] = Query(None),
-    casino: Optional[str] = Query(None),
-    maquinas: Optional[List[str]] = Query(None),
-):
-    registros = obtener_datos_reporte(
-        fecha_inicio, fecha_fin, casino, None, None, maquinas)
-    utilidad_total = sum(r["utilidad"] for r in registros)
-    valor_participacion = utilidad_total * (porcentaje / 100)
-    return {
-        "utilidad_total": utilidad_total,
-        "valor_participacion": valor_participacion,
-        "registros": registros,
-    }
