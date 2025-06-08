@@ -25,5 +25,14 @@
     "numero_serie": "GOM-MWM-7703-011K",
     "denominacion": 20.0,
     "casino": "Casino Medellín"
+  },
+  "12": {
+    "codigo": "C1-1",
+    "activo": 1,
+    "marca": "IGT",
+    "modelo": "Fortune Nexus 7000",
+    "numero_serie": "FG-23435436",
+    "denominacion": 20.0,
+    "casino": "Casino Cali"
   }
 }
