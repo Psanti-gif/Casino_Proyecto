@@ -1,9 +1,11 @@
-from fastapi import APIRouter, UploadFile, Form
+from fastapi import APIRouter, UploadFile, Form, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import shutil
 import json
+import socket
+
 
 router = APIRouter(tags=["Configuracion"])
 
@@ -165,3 +167,21 @@ def obtener_marcas_modelos():
         with ARCHIVO_MARCAS_MODELOS.open("r", encoding="utf-8") as f:
             return json.load(f)
     return {}
+
+
+def obtener_ipv4_local():
+    try:
+        # Crea un socket UDP "falso" para averiguar la IP local sin enviar datos
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Se usa para obtener la IP del adaptador de red activo
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+
+@router.get("/obtener-ip")
+def obtener_ip():
+    return {"ip": obtener_ipv4_local()}
