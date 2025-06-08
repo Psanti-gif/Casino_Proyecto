@@ -171,9 +171,7 @@ def obtener_marcas_modelos():
 
 def obtener_ipv4_local():
     try:
-        # Crea un socket UDP "falso" para averiguar la IP local sin enviar datos
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # Se usa para obtener la IP del adaptador de red activo
         s.connect(("8.8.8.8", 80))
         ip = s.getsockname()[0]
         s.close()
